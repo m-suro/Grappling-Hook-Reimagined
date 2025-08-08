@@ -1,9 +1,9 @@
 name: GrapplingHook
 author: SnowGears
 description: A simple grappling hook plugin.
-version: 1.6.5
-api-version: 1.14
-main: com.snowgears.grapplinghook.GrapplingHook
+version: 1.0
+api-version: 1.17
+main: me.msuro.grapplinghook.GrapplingHook
 permissions:
     grapplinghook.pull.self:
         description: Allows player to pull themselves to a location

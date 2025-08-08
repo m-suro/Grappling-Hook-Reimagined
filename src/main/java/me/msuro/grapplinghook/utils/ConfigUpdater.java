@@ -1,4 +1,4 @@
-package com.snowgears.grapplinghook.utils;
+package me.msuro.grapplinghook.utils;
 
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;

@@ -1,0 +1,50 @@
+# =============================================================================
+# GRAPPLING HOOKS CONFIGURATION
+# =============================================================================
+# This file controls all grappling hook types and their behavior.
+# Each hook can have different settings, items, and restrictions.
+
+hooks:
+  air_hook:
+    # Basic Settings
+    settings:
+      enabled: true                    # Enable/disable this hook type
+      max_uses: 10                     # How many times this hook can be used before breaking (-1 = unlimited)
+      cooldown_seconds: 0              # Delay between uses in seconds
+
+      # Movement Speed Settings (1.0 = normal speed, 2.0 = double speed, 0.5 = half speed)
+      speed_settings:
+        throwing_speed:                # How fast/far the hook flies when thrown
+          x: 1.0                       # X-axis speed multiplier
+          y: 1.0                       # Y-axis (vertical) speed multiplier
+          z: 1.0                       # Z-axis speed multiplier
+        pulling_speed:                 # How fast/far you get pulled by the hook
+          x: 1.0                       # X-axis pull strength
+          y: 1.0                       # Y-axis (vertical) pull strength
+          z: 1.0                       # Z-axis pull strength
+
+      # Special Abilities
+      special_features:
+        prevent_fall_damage: false     # Player takes no fall damage when using this hook
+        slow_falling: false            # Player falls slowly while hook is active (And above the player)
+        break_on_disconnect: false     # Hook breaks if line of sight is lost
+        sticky_landing: false          # Hook sticks to surfaces longer
+
+    # Item Appearance
+    item_display:
+      name: '&6Air Grappling Hook'     # Name shown in inventory (&6 = gold color)
+      description:                     # Text shown when hovering over item
+      - '&7Uses remaining: &a[uses]'   # [uses] gets replaced with actual number
+      texture_id: 0                    # Custom texture number (0 = default)
+
+    # What Blocks This Hook Can Attach To
+    allowed_blocks:
+      mode: 'ALLOW_ONLY'               # ALLOW_ONLY or BLOCK_ONLY
+      block_list:                      # List of blocks (ALLOW_ONLY = can attach, BLOCK_ONLY = cannot attach)
+      - 'AIR'                          # This hook only works on air blocks
+
+    # What Entities This Hook Can Attach To
+    allowed_entities:
+      mode: 'ALLOW_ONLY'               # ALLOW_ONLY or BLOCK_ONLY
+      entity_list:                     # List of entities (leave empty to disable entity hooking)
+      - ''                             # Empty = no entities allowed

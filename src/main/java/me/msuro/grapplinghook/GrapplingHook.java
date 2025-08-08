@@ -1,35 +1,40 @@
-package com.snowgears.grapplinghook;
+package me.msuro.grapplinghook;
 
-import com.snowgears.grapplinghook.utils.ConfigUpdater;
-import com.snowgears.grapplinghook.utils.RecipeLoader;
-import org.bstats.bukkit.Metrics;
+import lombok.Getter;
+import me.msuro.grapplinghook.listeners.PlayerListener;
+import me.msuro.grapplinghook.utils.ConfigUpdater;
+import me.msuro.grapplinghook.utils.RecipeLoader;
+import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.event.HandlerList;
+import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class GrapplingHook extends JavaPlugin{
 	
-	private GrapplingListener grapplingListener = new GrapplingListener(this);
+	private PlayerListener playerListener = new PlayerListener(this);
 	private CommandHandler commandHandler;
-	private static GrapplingHook plugin;
+	@Getter
+    private static GrapplingHook plugin;
 	protected FileConfiguration config;
 
 	private boolean usePerms = false;
 	private boolean teleportHooked = false;
-	private boolean useMetrics = false;
-	private boolean consumeUseOnSlowfall = false;
+    private boolean consumeUseOnSlowfall = false;
 	private String commandAlias;
 	private RecipeLoader recipeLoader;
 
 
 	public void onEnable(){
 		plugin = this;
-		getServer().getPluginManager().registerEvents(grapplingListener, this);
+		getServer().getPluginManager().registerEvents(playerListener, this);
 		
 		File configFile = new File(this.getDataFolder() + "/config.yml");
 		if(!configFile.exists())
@@ -43,30 +48,8 @@ public class GrapplingHook extends JavaPlugin{
         }
 		config = YamlConfiguration.loadConfiguration(configFile);
 
-		File recipeConfigFile = new File(getDataFolder(), "recipes.yml");
-		if (!recipeConfigFile.exists()) {
-			recipeConfigFile.getParentFile().mkdirs();
-			this.copy(getResource("recipes.yml"), recipeConfigFile);
-		}
-		recipeLoader = new RecipeLoader(plugin);
-		
-		usePerms = config.getBoolean("usePermissions");
-		teleportHooked = config.getBoolean("teleportToHook");
-		useMetrics = config.getBoolean("useMetrics");
-		consumeUseOnSlowfall = config.getBoolean("consumeUseOnSlowfall");
 		commandAlias = config.getString("command");
 
-		if(useMetrics){
-			// You can find the plugin ids of your plugins on the page https://bstats.org/what-is-my-plugin-id
-			int pluginId = 9957;
-
-			try {
-				Metrics metrics = new Metrics(this, pluginId);
-			} catch(Exception e) {}
-
-			// Optional: Add custom charts
-			//metrics.addCustomChart(new Metrics.SimplePie("chart_id", () -> "My value"));
-		}
 
 		commandHandler = new CommandHandler(this, "grapplinghook.operator", commandAlias, "Base command for the GrapplingHook plugin", "/gh", new ArrayList(Arrays.asList(commandAlias)));
 	}
@@ -76,7 +59,7 @@ public class GrapplingHook extends JavaPlugin{
 	}
 
 	public void reload(){
-		HandlerList.unregisterAll(grapplingListener);
+		HandlerList.unregisterAll(playerListener);
 
 		onDisable();
 		onEnable();
@@ -86,21 +69,8 @@ public class GrapplingHook extends JavaPlugin{
 		return recipeLoader;
 	}
 
-    private static boolean isInteger(String s) {
-	    try { 
-	        Integer.parseInt(s); 
-	    } catch(NumberFormatException e) { 
-	        return false; 
-	    }
-	    return true;
-	}
-
-	public static GrapplingHook getPlugin(){
-		return plugin;
-	}
-
-	public GrapplingListener getGrapplingListener(){
-		return grapplingListener;
+    public PlayerListener getPlayerListener(){
+		return playerListener;
 	}
 
 	public boolean isConsumeUseOnSlowfall(){
@@ -129,4 +99,21 @@ public class GrapplingHook extends JavaPlugin{
 			e.printStackTrace();
 		}
 	}
+
+    public String formatMessage(String message) {
+        if (message == null || message.isEmpty()) {
+            return "";
+        }
+        Pattern HEX_PATTERN = Pattern.compile("&#([A-Fa-f0-9]{6})");
+        Matcher matcher = HEX_PATTERN.matcher(message);
+        StringBuilder formattedMessage = new StringBuilder();
+        while (matcher.find()) {
+            String hexColor = matcher.group(1);
+            String colorCode = "§x§" + hexColor.charAt(0) + "§" + hexColor.charAt(1) + "§" + hexColor.charAt(2) +
+                    "§" + hexColor.charAt(3) + "§" + hexColor.charAt(4) + "§" + hexColor.charAt(5);
+            matcher.appendReplacement(formattedMessage, colorCode);
+        }
+        matcher.appendTail(formattedMessage);
+        return ChatColor.translateAlternateColorCodes('&', formattedMessage.toString());
+    }
 }

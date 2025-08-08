@@ -1,6 +1,6 @@
-package com.snowgears.grapplinghook.utils;
+package me.msuro.grapplinghook.utils;
 
-import com.snowgears.grapplinghook.GrapplingHook;
+import me.msuro.grapplinghook.GrapplingHook;
 import org.bukkit.*;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.EntityType;
@@ -126,7 +126,7 @@ public class RecipeLoader {
 
                 hookSettings.setHookItem(hookItem);
                 //register the hook setting in map
-                plugin.getGrapplingListener().addHookSettings(id, hookSettings);
+                //plugin.getPlayerListener().addHookSettings(id, hookSettings);
 
                 NamespacedKey key = new NamespacedKey(plugin, "hook_item_" + id);
                 ShapedRecipe recipe = new ShapedRecipe(key, hookItem);
@@ -232,11 +232,6 @@ public class RecipeLoader {
     }
 
     public void unloadRecipes(){
-        NamespacedKey key;
-        for(String hookID : plugin.getGrapplingListener().getHookIDs()){
-            key = new NamespacedKey(plugin, "hook_item_" + hookID);
-            Bukkit.removeRecipe(key);
-        }
     }
 
     private String formatString(String unformattedString, int uses){

@@ -1,4 +1,4 @@
-package com.snowgears.grapplinghook.utils;
+package me.msuro.grapplinghook.utils;
 
 import org.bukkit.Material;
 import org.bukkit.entity.EntityType;
