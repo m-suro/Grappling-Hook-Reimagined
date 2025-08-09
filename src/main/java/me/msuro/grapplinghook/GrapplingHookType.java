@@ -35,6 +35,12 @@ public class GrapplingHookType {
     @Getter @Setter private Boolean lineBreak; // Whether the hook line can break
     @Getter @Setter private Boolean stickyHook; // Whether the hook sticks to blocks
 
+    @Getter @Setter private String blocksMode; // 'ALLOW_ONLY', 'BLOCK_ONLY' - Type of the list of blocks that the hook can attach to
+    @Getter @Setter private List<String> blocksList; // List of blocks that the hook can/cannot attach to
+
+    @Getter @Setter private String mobsMode; // 'ALLOW_ONLY', 'BLOCK_ONLY' - Type of the list of mobs that the hook can attach to
+    @Getter @Setter private List<String> mobsList; // List of mobs that the hook can/cannot attach to
+
     public GrapplingHookType(String name) {
         this.name = name;
     }
@@ -78,6 +84,18 @@ public class GrapplingHookType {
         this.slowFall = config.getBoolean(path + "special_features.slow_falling", false);
         this.lineBreak = config.getBoolean(path + "special_features.break_on_disconnect", false);
         this.stickyHook = config.getBoolean(path + "special_features.sticky_landing", false);
+
+        path = "hooks." + name + ".";
+
+        if (blocksMode == null)
+            blocksMode = config.getString(path + "allowed_blocks.mode", "ALLOW_ONLY");
+        if (blocksList == null || blocksList.isEmpty())
+            blocksList = config.getStringList(path + "allowed_blocks.block_list");
+
+        if (mobsMode == null)
+            mobsMode = config.getString(path + "allowed_entities.mode", "ALLOW_ONLY");
+        if (mobsList == null || mobsList.isEmpty())
+            mobsList = config.getStringList(path + "allowed_entities.entity_list");
 
         createItemStack();
         return this;
@@ -142,7 +160,7 @@ public class GrapplingHookType {
         return meta;
     }
 
-    private GrapplingHookType fillMissingDataFromConfig() {
+    private void fillMissingDataFromConfig() {
         if (name == null || name.isEmpty()) {
             throw new IllegalArgumentException("Hook name cannot be null or empty");
         }
@@ -178,7 +196,17 @@ public class GrapplingHookType {
         if (stickyHook == null)
             stickyHook = config.getBoolean(path + "special_features.sticky_landing", false);
 
-        return this;
+        path = "hooks." + name + ".";
+
+        if (blocksMode == null)
+            blocksMode = config.getString(path + "allowed_blocks.mode", "ALLOW_ONLY");
+        if (blocksList == null || blocksList.isEmpty())
+            blocksList = config.getStringList(path + "allowed_blocks.block_list");
+
+        if (mobsMode == null)
+            mobsMode = config.getString(path + "allowed_entities.mode", "ALLOW_ONLY");
+        if (mobsList == null || mobsList.isEmpty())
+            mobsList = config.getStringList(path + "allowed_entities.entity_list");
     }
 
     @Override
@@ -195,6 +223,11 @@ public class GrapplingHookType {
                 ", slowFall=" + slowFall +
                 ", lineBreak=" + lineBreak +
                 ", stickyHook=" + stickyHook +
+                ", blocksMode='" + blocksMode + '\'' +
+                ", blocksList=" + blocksList +
+                ", mobsMode='" + mobsMode + '\'' +
+                ", mobsList=" + mobsList +
+                ", itemStack=" + (itemStack != null ? itemStack.getType() : "null") +
                 '}';
     }
 

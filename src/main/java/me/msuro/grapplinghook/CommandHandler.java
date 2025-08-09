@@ -64,16 +64,15 @@ public class CommandHandler extends BukkitCommand {
             } else if (args[0].equalsIgnoreCase("give2")) {
                 if (sender instanceof Player) {
                     Player player = (Player) sender;
-                    YamlConfiguration config = YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "recipes.yml"));
-                    ConfigurationSection hooksSection = config.getConfigurationSection("recipes");
+                    YamlConfiguration config = YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "hooks.yml"));
+                    ConfigurationSection hooksSection = config.getConfigurationSection("hooks");
                     for(String i : hooksSection.getKeys(false)) {
-                        String id = hooksSection.getString(i + ".id");
-                        GrapplingHookType hookType = new GrapplingHookType(id).createItemStack();
+                        System.out.println("Giving hook with id: " + i);
+                        GrapplingHookType hookType = new GrapplingHookType(i).createItemStack();
                         if (hookType != null) {
-                            System.out.println(hookType.getItemStack());
                             player.getInventory().addItem(hookType.getItemStack());
                         } else {
-                            player.sendMessage(ChatColor.RED+"Failed to give grappling hook with id: "+id);
+                            player.sendMessage(ChatColor.RED+"Failed to give grappling hook with id: "+i);
                         }
                     }
                     player.sendMessage(ChatColor.GREEN+"Gave all grappling hooks to "+player.getName());

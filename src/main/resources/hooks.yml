@@ -20,9 +20,9 @@ hooks:
           y: 1.0                       # Y-axis (vertical) speed multiplier
           z: 1.0                       # Z-axis speed multiplier
         pulling_speed:                 # How fast/far you get pulled by the hook
-          x: 1.0                       # X-axis pull strength
+          x: 1.5                       # X-axis pull strength
           y: 1.0                       # Y-axis (vertical) pull strength
-          z: 1.0                       # Z-axis pull strength
+          z: 1.5                       # Z-axis pull strength
 
       # Special Abilities
       special_features:
@@ -49,3 +49,38 @@ hooks:
       mode: 'ALLOW_ONLY'               # ALLOW_ONLY or BLOCK_ONLY
       entity_list:                     # List of entities (leave empty to disable entity hooking)
       - ''                             # Empty = no entities allowed
+
+  basic_hook:
+    settings:
+      enabled: true
+      max_uses: 5
+      cooldown_seconds: 0
+      speed_settings:
+        throwing_speed:
+          x: 1.0
+          y: 1.0
+          z: 1.0
+        pulling_speed:
+          x: 1.0
+          y: 1.0
+          z: 1.0
+      special_features:
+        prevent_fall_damage: false
+        slow_falling: true
+        break_on_disconnect: true
+        sticky_landing: true
+
+    item_display:
+      name: '&6Basic Grappling Hook'
+      description:
+        - '&7Uses remaining: &a[uses]'
+      texture_id: 0
+
+    allowed_blocks:
+      mode: 'BLOCK_ONLY'
+      block_list:
+        - 'AIR'
+    allowed_entities:
+      mode: 'ALLOW_ONLY'
+      entity_list:
+        - ''
