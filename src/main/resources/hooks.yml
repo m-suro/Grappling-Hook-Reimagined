@@ -3,6 +3,7 @@
 # =============================================================================
 # This file controls all grappling hook types and their behavior.
 # Each hook can have different settings, items, and restrictions.
+# Hex format is &#RRGGBB
 
 hooks:
   air_hook:

@@ -8,6 +8,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.util.Vector;
 
 import java.io.File;
 import java.util.List;
@@ -26,8 +27,8 @@ public class GrapplingHookType {
     @Getter @Setter private Integer cooldown; // Cooldown in seconds
     @Getter @Setter private ItemStack itemStack;
 
-    @Getter @Setter private Integer velocityThrow; // Velocity when thrown
-    @Getter @Setter private Integer velocityPull; // Velocity when pulled back
+    @Getter @Setter private Vector velocityThrowMultiplier; // Velocity when thrown
+    @Getter @Setter private Vector velocityPullMultiplier; // Velocity when pulled back
 
     @Getter @Setter private Boolean fallDamage; // Whether the hook causes fall damage
     @Getter @Setter private Boolean slowFall; // Whether the hook causes slow falling
@@ -44,6 +45,9 @@ public class GrapplingHookType {
         }
         this.id = (int) (Math.random() * (9999999 - 1111111 + 1)) + 1111111;
         this.itemStack = new ItemStack(FISHING_ROD);
+
+        fillMissingDataFromConfig();
+
         itemStack.setItemMeta(getReadyMeta());
         return this;
     }
@@ -53,18 +57,27 @@ public class GrapplingHookType {
         YamlConfiguration config = YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "hooks.yml"));
         String path = "hooks." + name + ".settings.";
 
-        this.maxUses = config.getInt(path + "uses", -1);
-        this.uses = maxUses;
+        this.maxUses = config.getInt(path + "max_uses", -1);
+        this.uses = 0;
 
-        this.velocityThrow = config.getInt(path + "velocityThrow", 1);
-        this.velocityPull = config.getInt(path + "velocityPull", 1);
+        // Load throwing speed vector
+        double throwX = config.getDouble(path + "speed_settings.throwing_speed.x", 1.0);
+        double throwY = config.getDouble(path + "speed_settings.throwing_speed.y", 1.0);
+        double throwZ = config.getDouble(path + "speed_settings.throwing_speed.z", 1.0);
+        this.velocityThrowMultiplier = new Vector(throwX, throwY, throwZ);
 
-        this.cooldown = config.getInt(path + "cooldown", 0);
+        // Load pulling speed vector
+        double pullX = config.getDouble(path + "speed_settings.pulling_speed.x", 1.0);
+        double pullY = config.getDouble(path + "speed_settings.pulling_speed.y", 1.0);
+        double pullZ = config.getDouble(path + "speed_settings.pulling_speed.z", 1.0);
+        this.velocityPullMultiplier = new Vector(pullX, pullY, pullZ);
 
-        this.fallDamage = config.getBoolean(path + "extra.FALLDAMAGE", true);
-        this.slowFall = config.getBoolean(path + "extra.SLOWFALL", false);
-        this.lineBreak = config.getBoolean(path + "extra.LINEBREAK", true);
-        this.stickyHook = config.getBoolean(path + "extra.STICKYHOOK", false);
+        this.cooldown = config.getInt(path + "cooldown_seconds", 0);
+
+        this.fallDamage = !config.getBoolean(path + "special_features.prevent_fall_damage", false);
+        this.slowFall = config.getBoolean(path + "special_features.slow_falling", false);
+        this.lineBreak = config.getBoolean(path + "special_features.break_on_disconnect", false);
+        this.stickyHook = config.getBoolean(path + "special_features.sticky_landing", false);
 
         createItemStack();
         return this;
@@ -112,8 +125,8 @@ public class GrapplingHookType {
         GrapplingHook plugin = GrapplingHook.getPlugin();
         YamlConfiguration config = YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "hooks.yml"));
 
-        String itemName = config.getString("hooks." + name + ".item.name", name);
-        List<String> itemLore = config.getStringList("hooks." + name + ".item.lore");
+        String itemName = config.getString("hooks." + name + ".item_display.name", name);
+        List<String> itemLore = config.getStringList("hooks." + name + ".item_display.description");
         meta.setDisplayName(plugin.formatMessage(itemName));
         itemLore.replaceAll(line -> plugin.formatMessage(line));
         if (!itemLore.isEmpty()) {
@@ -139,56 +152,50 @@ public class GrapplingHookType {
         String path = "hooks." + name + ".settings.";
 
         if (maxUses == null)
-            maxUses = config.getInt(path + "uses", -1);
+            maxUses = config.getInt(path + "max_uses", -1);
         if (uses == null)
             uses = 0;
-        if (velocityThrow == null)
-            velocityThrow = config.getInt(path + "velocityThrow", 0);
-        if (velocityPull == null)
-            velocityPull = config.getInt(path + "velocityPull", 0);
+        if (velocityThrowMultiplier == null) {
+            double throwX = config.getDouble(path + "speed_settings.throwing_speed.x", 1.0);
+            double throwY = config.getDouble(path + "speed_settings.throwing_speed.y", 1.0);
+            double throwZ = config.getDouble(path + "speed_settings.throwing_speed.z", 1.0);
+            velocityThrowMultiplier = new Vector(throwX, throwY, throwZ);
+        }
+        if (velocityPullMultiplier == null) {
+            double pullX = config.getDouble(path + "speed_settings.pulling_speed.x", 1.0);
+            double pullY = config.getDouble(path + "speed_settings.pulling_speed.y", 1.0);
+            double pullZ = config.getDouble(path + "speed_settings.pulling_speed.z", 1.0);
+            velocityPullMultiplier = new Vector(pullX, pullY, pullZ);
+        }
         if (cooldown == null)
-            cooldown = config.getInt(path + "cooldown", 0);
+            cooldown = config.getInt(path + "cooldown_seconds", 0);
         if (fallDamage == null)
-            fallDamage = config.getBoolean(path + "extra.FALLDAMAGE", true);
+            fallDamage = !config.getBoolean(path + "special_features.prevent_fall_damage", false);
         if (slowFall == null)
-            slowFall = config.getBoolean(path + "extra.SLOWFALL", false);
+            slowFall = config.getBoolean(path + "special_features.slow_falling", false);
         if (lineBreak == null)
-            lineBreak = config.getBoolean(path + "extra.LINEBREAK", true);
+            lineBreak = config.getBoolean(path + "special_features.break_on_disconnect", false);
         if (stickyHook == null)
-            stickyHook = config.getBoolean(path + "extra.STICKYHOOK", false);
+            stickyHook = config.getBoolean(path + "special_features.sticky_landing", false);
 
         return this;
     }
 
-}
+    @Override
+    public String toString() {
+        return "GrapplingHookType{" +
+                "maxUses=" + maxUses +
+                ", name='" + name + '\'' +
+                ", uses=" + uses +
+                ", id=" + id +
+                ", cooldown=" + cooldown +
+                ", velocityThrowMultiplier=" + velocityThrowMultiplier +
+                ", velocityPullMultiplier=" + velocityPullMultiplier +
+                ", fallDamage=" + fallDamage +
+                ", slowFall=" + slowFall +
+                ", lineBreak=" + lineBreak +
+                ", stickyHook=" + stickyHook +
+                '}';
+    }
 
-/*
-hooks:
-  air_hook:
-    settings:
-      enabled: true
-      uses: 10
-      # Throw - how far the hook will go when thrown
-      velocityThrow: 1.0
-        # Pull - how far the player will be pulled when the hook is used
-      velocityPull: 1.0
-      cooldown: 0 # in seconds
-      extra:
-        SLOWFALL: false
-        FALLDAMAGE: false
-        LINEBREAK: false
-        STICKYHOOK: false
-    item:
-      name: '&6Air Grappling Hook'
-      lore:
-      - '&7Uses left - &a[uses]'
-      customModelData: 0
-    blocks:
-      listType: 'WHITELIST' # options are BLACKLIST and WHITELIST
-      list:
-      - 'AIR'
-    entities:
-      listType: 'WHITELIST' # options are BLACKLIST and WHITELIST
-      list:
-      - ''
- */
+}

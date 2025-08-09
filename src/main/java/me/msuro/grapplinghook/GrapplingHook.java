@@ -3,12 +3,10 @@ package me.msuro.grapplinghook;
 import lombok.Getter;
 import me.msuro.grapplinghook.listeners.PlayerListener;
 import me.msuro.grapplinghook.utils.ConfigUpdater;
-import me.msuro.grapplinghook.utils.RecipeLoader;
 import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.event.HandlerList;
-import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.*;
@@ -25,11 +23,10 @@ public class GrapplingHook extends JavaPlugin{
     private static GrapplingHook plugin;
 	protected FileConfiguration config;
 
-	private boolean usePerms = false;
+	boolean usePerms = false;
 	private boolean teleportHooked = false;
     private boolean consumeUseOnSlowfall = false;
 	private String commandAlias;
-	private RecipeLoader recipeLoader;
 
 
 	public void onEnable(){
@@ -37,15 +34,8 @@ public class GrapplingHook extends JavaPlugin{
 		getServer().getPluginManager().registerEvents(playerListener, this);
 		
 		File configFile = new File(this.getDataFolder() + "/config.yml");
-		if(!configFile.exists())
-		{
-		  this.saveDefaultConfig();
-		}
-        try {
-            ConfigUpdater.update(plugin, "config.yml", configFile, new ArrayList<>());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        checkAndCreateConfigFile("config.yml");
+        checkAndCreateConfigFile("hooks.yml");
 		config = YamlConfiguration.loadConfiguration(configFile);
 
 		commandAlias = config.getString("command");
@@ -55,7 +45,6 @@ public class GrapplingHook extends JavaPlugin{
 	}
 
 	public void onDisable(){
-		recipeLoader.unloadRecipes();
 	}
 
 	public void reload(){
@@ -65,9 +54,6 @@ public class GrapplingHook extends JavaPlugin{
 		onEnable();
 	}
 
-	public RecipeLoader getRecipeLoader(){
-		return recipeLoader;
-	}
 
     public PlayerListener getPlayerListener(){
 		return playerListener;
@@ -75,10 +61,6 @@ public class GrapplingHook extends JavaPlugin{
 
 	public boolean isConsumeUseOnSlowfall(){
 		return consumeUseOnSlowfall;
-	}
-
-	public boolean usePerms(){
-		return usePerms;
 	}
 
 	public boolean getTeleportHooked(){
@@ -99,6 +81,26 @@ public class GrapplingHook extends JavaPlugin{
 			e.printStackTrace();
 		}
 	}
+
+    private void checkAndCreateConfigFile(String fileName) {
+        File file = new File(getDataFolder(), fileName);
+        if (!file.exists()) {
+            try {
+                if (file.createNewFile()) {
+                    InputStream in = getResource(fileName);
+                    if (in != null) {
+                        getLogger().info("Creating config file: " + fileName);
+                        copy(in, file);
+                    } else {
+                        getLogger().warning("Resource " + fileName + " not found in plugin jar.");
+                    }
+                }
+            } catch (IOException e) {
+                getLogger().severe("Could not create config file: " + fileName);
+                e.printStackTrace();
+            }
+        }
+    }
 
     public String formatMessage(String message) {
         if (message == null || message.isEmpty()) {

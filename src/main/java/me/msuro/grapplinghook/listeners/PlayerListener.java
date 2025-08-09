@@ -1,6 +1,7 @@
 package me.msuro.grapplinghook.listeners;
 
 import me.msuro.grapplinghook.GrapplingHook;
+import me.msuro.grapplinghook.GrapplingHookType;
 import me.msuro.grapplinghook.api.HookAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -10,6 +11,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerFishEvent;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 
 
@@ -41,38 +43,31 @@ public class PlayerListener implements Listener {
         }
         //Bukkit.broadcastMessage(" ");
 
+        ItemStack itemInHand = player.getInventory().getItemInMainHand();
+        if(!HookAPI.isGrapplingHook(itemInHand))
+            return;
+
+        GrapplingHookType hookType = new GrapplingHookType(null).fromItemStack(itemInHand);
+
+
         // IN_GROUND or FAILED_ATTEMPT -> basic grappling hook
-        if(event.getState() == PlayerFishEvent.State.IN_GROUND || event.getState() == PlayerFishEvent.State.FAILED_ATTEMPT) {
-
-            Location loc = event.getHook().getLocation();
-
-            //Block block = loc.clone().add(0, -0.3, 0).getBlock();
-            //PlayerGrappleEvent e = new PlayerGrappleEvent(player, player, loc);
-           // plugin.getServer().getPluginManager().callEvent(e);
+        switch(event.getState()) {
+            case IN_GROUND: // Pulling the hook back from ground
+            case FAILED_ATTEMPT: // Pulling the hook back from water after failing to catch a fish
+                break;
+            case CAUGHT_FISH: // Pulling the hook back from water after catching a fish
+                event.setCancelled(true);
+                break;
+            case FISHING: // Throwing the hook
+                event.getHook().setVelocity(event.getHook().getVelocity().multiply(hookType.getVelocityThrowMultiplier()));                break;
+            case REEL_IN: // Pulling the hook back
+                event.getPlayer().setVelocity(new Vector(0, 0.25, 0));
+                Location hookLocation = event.getHook().getLocation();
+                Vector vector = hookLocation.toVector().subtract(player.getLocation().toVector());
+                vector = vector.normalize().multiply(hookType.getVelocityPullMultiplier());
+                event.getPlayer().setVelocity(vector);
+            default:
+                break;
         }
-        else if(event.getState() == PlayerFishEvent.State.CAUGHT_FISH){
-            //PlayerGrappleEvent e = new PlayerGrappleEvent(player, player, event.getHook().getLocation());
-            //plugin.getServer().getPluginManager().callEvent(e);
-            event.setCancelled(true);
-        }
-        //
-        else if(event.getState() == PlayerFishEvent.State.FISHING){
-
-        }
-        else if(event.getState() == PlayerFishEvent.State.REEL_IN){
-
-            Block block = event.getHook().getLocation().clone().add(0, -0.1, 0).getBlock();
-
-//            if (HookAPI.canHookMaterial(player, block.getType())) {
-//                if(plugin.usePerms() == false || player.hasPermission("grapplinghook.pull.self")){
-//                    PlayerGrappleEvent e = new PlayerGrappleEvent(player, player, event.getHook().getLocation());
-//                    plugin.getServer().getPluginManager().callEvent(e);
-//                }
-//            }
-        }
-        else{
-        }
-    }
-
-
+       }
 }

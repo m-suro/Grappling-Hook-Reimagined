@@ -1,7 +1,6 @@
 package me.msuro.grapplinghook.api;
 
 import me.msuro.grapplinghook.GrapplingHook;
-import me.msuro.grapplinghook.utils.HookSettings;
 import org.bukkit.*;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -21,7 +20,7 @@ public final class HookAPI {
 			PersistentDataContainer persistentData = im.getPersistentDataContainer();
             try {
                 int uses = persistentData.get(new NamespacedKey(GrapplingHook.getPlugin(), "uses"), PersistentDataType.INTEGER);
-                return (uses > 0 && persistentData.has(new NamespacedKey(GrapplingHook.getPlugin(), "id"), PersistentDataType.INTEGER));
+                return (uses >= 0 && persistentData.has(new NamespacedKey(GrapplingHook.getPlugin(), "id"), PersistentDataType.INTEGER));
             } catch (NullPointerException e) {
                 return false;
             }

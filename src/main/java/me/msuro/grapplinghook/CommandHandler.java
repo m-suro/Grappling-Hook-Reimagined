@@ -1,6 +1,5 @@
 package me.msuro.grapplinghook;
 
-import me.msuro.grapplinghook.utils.HookSettings;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandMap;
@@ -55,10 +54,6 @@ public class CommandHandler extends BukkitCommand {
             if (args[0].equalsIgnoreCase("reload")) {
                 if (sender instanceof Player) {
                     Player player = (Player) sender;
-                    if ((plugin.usePerms() && !player.hasPermission("grapplinghook.operator")) || (!plugin.usePerms() && !player.isOp())) {
-                        player.sendMessage(ChatColor.RED+"You are not authorized to use this command.");
-                        return true;
-                    }
                     plugin.reload();
                     player.sendMessage(ChatColor.GREEN+"GrapplingHook has been reloaded.");
                 } else {
