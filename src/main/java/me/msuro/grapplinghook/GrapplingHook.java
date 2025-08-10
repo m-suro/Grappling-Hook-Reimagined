@@ -2,7 +2,8 @@ package me.msuro.grapplinghook;
 
 import lombok.Getter;
 import me.msuro.grapplinghook.listeners.PlayerListener;
-import me.msuro.grapplinghook.utils.ConfigUpdater;
+import me.msuro.grapplinghook.utils.CooldownSystem;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -28,9 +29,38 @@ public class GrapplingHook extends JavaPlugin{
     private boolean consumeUseOnSlowfall = false;
 	private String commandAlias;
 
+    @Getter
+    private boolean isServerVersionAtLeast1_21_2 = false;
+
 
 	public void onEnable(){
 		plugin = this;
+
+
+        try {
+            // e.g., "1.21.4-R0.1-SNAPSHOT"
+            String bukkit = Bukkit.getBukkitVersion();
+            String core = bukkit.split("-")[0];          // "1.21.4"
+            String[] parts = core.split("\\.");          // ["1","21","4"]
+
+            int major = parts.length > 0 ? Integer.parseInt(parts[0]) : 0;   // 1
+            int minor = parts.length > 1 ? Integer.parseInt(parts[1]) : 0;   // 21
+            int patch = parts.length > 2 ? Integer.parseInt(parts[2]) : 0;   // 4
+
+            isServerVersionAtLeast1_21_2 = (major > 1) || (major == 1 && minor >= 21 && patch >= 2);
+        } catch (Exception ex) {
+            getLogger().warning("Unable to parse Bukkit version: " + Bukkit.getBukkitVersion());
+            // Fallback: assume not 1.21+
+            isServerVersionAtLeast1_21_2 = false;
+        }
+
+        if (!isServerVersionAtLeast1_21_2) {
+            getLogger().severe("This plugin is working best on 1.21.2+ versions of Minecraft.");
+            getLogger().severe("The new cooldown system is not available on versions below 1.21.2 as the API does not support it.");
+            getLogger().severe("Please consider updating your server to 1.21.2+ for the best experience.");
+            new CooldownSystem();
+        }
+
 		getServer().getPluginManager().registerEvents(playerListener, this);
 		
 		File configFile = new File(this.getDataFolder() + "/config.yml");
@@ -118,4 +148,5 @@ public class GrapplingHook extends JavaPlugin{
         matcher.appendTail(formattedMessage);
         return ChatColor.translateAlternateColorCodes('&', formattedMessage.toString());
     }
+
 }

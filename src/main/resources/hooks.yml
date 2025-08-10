@@ -80,6 +80,8 @@ hooks:
       mode: 'BLOCK_ONLY'
       block_list:
         - 'AIR'
+        - 'WATER'
+        - 'LAVA'
     allowed_entities:
       mode: 'ALLOW_ONLY'
       entity_list:

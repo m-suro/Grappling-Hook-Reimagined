@@ -1,16 +1,3 @@
-# Thanks for downloading Grappling Hook! #
-# IF YOU HAVE A QUESTION COME JOIN MY DISCORD: https://discord.gg/GpSwEWS #
-
-usePermissions: false
-
-# Setting this to true will use teleporting instead of velocity #
-teleportToHook: false
-
-# Setting this to false will not report plugin metrics to bstats #
-useMetrics: true
-
-# Setting this to true will consume uses when the hook slowfall is used #
-consumeUseOnSlowfall: false
-
-# Change this to change the base command alias for the plugin #
-command: 'gh'
+# Thanks for downloading Grappling Hook Reimagined! #
+# This is a fork of the original Grappling Hook by SnowGears [https://www.spigotmc.org/resources/grappling-hook.22854/]
+# IF YOU HAVE A QUESTION COME JOIN MY DISCORD: XXX #

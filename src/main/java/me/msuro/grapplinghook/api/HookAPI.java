@@ -35,8 +35,8 @@ public final class HookAPI {
         List<String> blocksList = hookType.getBlocksList();
         String blockTypeName = block.getType().name();
 
-        Bukkit.broadcastMessage("Checking if hook `" + hookType.getId() + "` can hook onto block: " + blockTypeName + " [List mode = " + blocksMode + "]");
-        Bukkit.broadcastMessage("Blocks list: " + blocksList);
+        //Bukkit.broadcastMessage("Checking if hook `" + hookType.getId() + "` can hook onto block: " + blockTypeName + " [List mode = " + blocksMode + "]");
+        //Bukkit.broadcastMessage("Blocks list: " + blocksList);
 
         boolean blockInList = blocksList.stream()
                 .anyMatch(blockType -> blockType.equalsIgnoreCase(blockTypeName));
