@@ -55,10 +55,9 @@ public class GrapplingHook extends JavaPlugin{
         }
 
         if (!isServerVersionAtLeast1_21_2) {
-            getLogger().severe("This plugin is working best on 1.21.2+ versions of Minecraft.");
-            getLogger().severe("The new cooldown system is not available on versions below 1.21.2 as the API does not support it.");
-            getLogger().severe("Please consider updating your server to 1.21.2+ for the best experience.");
-            new CooldownSystem();
+            getLogger().warning("This plugin is working best on 1.21.2+ versions of Minecraft.");
+            getLogger().warning("The new cooldown system is not available on versions below 1.21.2 as the API does not support it.");
+            getLogger().warning("Please consider updating your server to 1.21.2+ for the best experience.");
         }
 
 		getServer().getPluginManager().registerEvents(playerListener, this);

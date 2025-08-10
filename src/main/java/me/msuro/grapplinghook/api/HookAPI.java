@@ -5,13 +5,11 @@ import me.msuro.grapplinghook.GrapplingHookType;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public final class HookAPI {
@@ -54,8 +52,8 @@ public final class HookAPI {
     }
 
     public static boolean canHookOntoEntity(GrapplingHookType hookType, EntityType entityType) {
-        String entitiesMode = hookType.getMobsMode();
-        List<String> entitiesList = hookType.getMobsList();
+        String entitiesMode = hookType.getEntityMode();
+        List<String> entitiesList = hookType.getEntityList();
         String entityTypeName = entityType.name();
 
         boolean entityInList = entitiesList.stream()

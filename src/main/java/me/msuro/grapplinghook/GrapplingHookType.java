@@ -38,18 +38,28 @@ public class GrapplingHookType {
     @Getter @Setter private String blocksMode; // 'ALLOW_ONLY', 'BLOCK_ONLY' - Type of the list of blocks that the hook can attach to
     @Getter @Setter private List<String> blocksList; // List of blocks that the hook can/cannot attach to
 
-    @Getter @Setter private String mobsMode; // 'ALLOW_ONLY', 'BLOCK_ONLY' - Type of the list of mobs that the hook can attach to
-    @Getter @Setter private List<String> mobsList; // List of mobs that the hook can/cannot attach to
+    @Getter @Setter private String entityMode; // 'ALLOW_ONLY', 'BLOCK_ONLY' - Type of the list of mobs that the hook can attach to
+    @Getter @Setter private List<String> entityList; // List of mobs that the hook can/cannot attach to
 
     public GrapplingHookType(String name) {
         this.name = name;
     }
 
+    /**
+     * Creates a new GrapplingHookType item stack based on the current settings.
+     * Generates a random ID for the hook and sets the item meta accordingly.
+     *
+     * @return The GrapplingHookType instance with the created ItemStack.
+     * @throws IllegalArgumentException if the hook name is null or empty.
+     */
     public GrapplingHookType createItemStack() {
         if (name == null || name.isEmpty()) {
             throw new IllegalArgumentException("Hook name cannot be null or empty");
         }
+
+        // Generate a random ID for the hook - for now not really used for anything
         this.id = (int) (Math.random() * (9999999 - 1111111 + 1)) + 1111111;
+
         this.itemStack = new ItemStack(FISHING_ROD);
 
         fillMissingDataFromConfig();
@@ -92,16 +102,24 @@ public class GrapplingHookType {
         if (blocksList == null || blocksList.isEmpty())
             blocksList = config.getStringList(path + "allowed_blocks.block_list");
 
-        if (mobsMode == null)
-            mobsMode = config.getString(path + "allowed_entities.mode", "ALLOW_ONLY");
-        if (mobsList == null || mobsList.isEmpty())
-            mobsList = config.getStringList(path + "allowed_entities.entity_list");
+        if (entityMode == null)
+            entityMode = config.getString(path + "allowed_entities.mode", "ALLOW_ONLY");
+        if (entityList == null || entityList.isEmpty())
+            entityList = config.getStringList(path + "allowed_entities.entity_list");
 
         createItemStack();
         return this;
 
     }
 
+    /**
+     * Creates a GrapplingHookType from an existing ItemStack.
+     * The ItemStack must be a valid fishing rod with the necessary persistent data.
+     *
+     * @param is The ItemStack to create the GrapplingHookType from.
+     * @return The GrapplingHookType created from the ItemStack.
+     * @throws IllegalArgumentException if the ItemStack is not a valid fishing rod or does not contain the required data.
+     */
     public GrapplingHookType fromItemStack(ItemStack is) {
         if (is == null || is.getType() != FISHING_ROD) {
             throw new IllegalArgumentException("ItemStack must be a valid fishing rod");
@@ -131,6 +149,14 @@ public class GrapplingHookType {
         return this;
     }
 
+    /**
+     * Prepares the ItemMeta for the grappling hook item.
+     * Sets the display name, lore, and persistent data.
+     *
+     * @return The prepared ItemMeta.
+     * @throws IllegalStateException if the ItemStack or ItemMeta is not initialized properly.
+     */
+    @SuppressWarnings("deprecation")
     private ItemMeta getReadyMeta() {
         if (itemStack == null) {
             throw new IllegalStateException("ItemStack is not initialized. Call createItemStack() first.");
@@ -203,10 +229,10 @@ public class GrapplingHookType {
         if (blocksList == null || blocksList.isEmpty())
             blocksList = config.getStringList(path + "allowed_blocks.block_list");
 
-        if (mobsMode == null)
-            mobsMode = config.getString(path + "allowed_entities.mode", "ALLOW_ONLY");
-        if (mobsList == null || mobsList.isEmpty())
-            mobsList = config.getStringList(path + "allowed_entities.entity_list");
+        if (entityMode == null)
+            entityMode = config.getString(path + "allowed_entities.mode", "ALLOW_ONLY");
+        if (entityList == null || entityList.isEmpty())
+            entityList = config.getStringList(path + "allowed_entities.entity_list");
     }
 
     @Override
@@ -225,8 +251,8 @@ public class GrapplingHookType {
                 ", stickyHook=" + stickyHook +
                 ", blocksMode='" + blocksMode + '\'' +
                 ", blocksList=" + blocksList +
-                ", mobsMode='" + mobsMode + '\'' +
-                ", mobsList=" + mobsList +
+                ", mobsMode='" + entityMode + '\'' +
+                ", mobsList=" + entityList +
                 ", itemStack=" + (itemStack != null ? itemStack.getType() : "null") +
                 '}';
     }

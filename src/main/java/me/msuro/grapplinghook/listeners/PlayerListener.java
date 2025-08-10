@@ -14,13 +14,13 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.scheduler.BukkitTask;
+
 import org.bukkit.util.Vector;
 
 import java.util.ArrayList;
 import java.util.List;
 
-
+@SuppressWarnings({"UnstableApiUsage", "deprecation"})
 public class PlayerListener implements Listener {
 
     private static GrapplingHook plugin;
@@ -29,20 +29,11 @@ public class PlayerListener implements Listener {
         plugin = instance;
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onGrapplingHookAction(PlayerFishEvent event) {
         Player player = event.getPlayer();
         if (!HookAPI.isGrapplingHook(player.getInventory().getItemInMainHand()))
             return;
-
-        //Bukkit.broadcastMessage(player.getName() + " called onGrapplingHookAction " + event.getState().name());
-        //double  x = Math.round(event.getHook().getVelocity().getX() * 100.0) / 100.0,
-        //        y = Math.round(event.getHook().getVelocity().getY() * 100.0) / 100.0,
-        //        z = Math.round(event.getHook().getVelocity().getZ() * 100.0) / 100.0;
-        //Bukkit.broadcastMessage("Default velocity - " + " x: " + x + ", y: " + y + ", z: " + z);
-        // Player looking almost directly down or up - massively decrease x and z velocity to make traveling up or down easier
-
-        //Bukkit.broadcastMessage(" ");
 
         ItemStack itemInHand = player.getInventory().getItemInMainHand();
         if (!HookAPI.isGrapplingHook(itemInHand))
@@ -50,22 +41,17 @@ public class PlayerListener implements Listener {
 
         GrapplingHookType hookType = new GrapplingHookType(null).fromItemStack(itemInHand);
 
-        double pitchDifference = 90 - Math.abs(player.getLocation().getPitch());
-        // Based on how high the player is looking, adjust the Y velocity
-        double y = -0.0063 * pitchDifference + 1;
-
-        Vector vector = null;
-
-        // IN_GROUND or FAILED_ATTEMPT -> basic grappling hook
         switch (event.getState()) {
             case FISHING: // Throwing the hook
                 handleThrownHook(event, player, hookType);
 
-                // Clear the default cooldown (~1 second) for the grappling hook item. It gets created every time in CooldownSystem.startCooldown()
-                // So far no option to remove the default cooldown, so we just set it to null on use (here).
-                ItemMeta meta = itemInHand.getItemMeta();
-                meta.setUseCooldown(null);
-                itemInHand.setItemMeta(meta);
+                if(plugin.isServerVersionAtLeast1_21_2()) {
+                    // Clear the default cooldown (~1 second) for the grappling hook item. It gets created every time in CooldownSystem.startCooldown() by Minecraft
+                    // So far there is no way to not create it, but we can clear it right after the hook is thrown. It causes a small visual glitch, but it is better than having a cooldown.
+                    ItemMeta meta = itemInHand.getItemMeta();
+                    meta.setUseCooldown(null);
+                    itemInHand.setItemMeta(meta);
+                }
 
                 break;
             case IN_GROUND: // Pulling the hook back from ground
@@ -77,38 +63,42 @@ public class PlayerListener implements Listener {
 
                 handleBlockHook(event, player, hookType);
 
-                CooldownSystem.startCooldown(player, itemInHand, hookType.getCooldown());
+                if (plugin.isServerVersionAtLeast1_21_2())
+                    CooldownSystem.startCooldown(player, itemInHand, hookType.getCooldown());
 
                 break;
             case REEL_IN: // Pulling the hook back mid-air
                 /*
                  * Determine which block the hook is "attached" to when reeling in.
-                 * - If the hook's position modulo 1 (in any axis) is near 0.0 or 1.0,
-                 *      it's likely right next to a block boundary (e.g., stuck on a side/corner/edge).
-                 *      In that case, use getNearestBlockLocation() to find the closest block face.
-                 * - Otherwise, use the block at the hook's exact (integer) location.
+                 * - If the hook's location is near a block boundary (e.g., 0.125 or 0.875 in X or Z),
+                 *   use the nearest solid block to the hook's location, thus calling it "block case". (This is the case when the player throws the hook onto the side of a block)
+                 * - If the hook's location is not near a block boundary,
+                 *   use the block at the hook's location, calling it "air case".
                  */
-                Block block = null;
+                Block block;
+                // By default, assume the hook is in the air - this is the most common case when this state gets called.
                 boolean airCase = true;
                 double relativeX = Math.abs(event.getHook().getLocation().getX() % 1);
                 double relativeZ = Math.abs(event.getHook().getLocation().getZ() % 1);
                 if(relativeX == 0.125 || relativeX == 0.875 ||
                         relativeZ == 0.125 || relativeZ == 0.875) {
                     block = getNearestBlockLocation(event.getHook().getLocation()).getBlock();
-                    airCase = false; // If the hook is near a block boundary, use the nearest block, thus the same mechanics as in IN_GROUND case
+                    airCase = false;
                 } else {
                     block = event.getHook().getLocation().getBlock();
                 }
                 if (!HookAPI.canHookOntoBlock(hookType, block))
                     return; // If the hook cannot hook onto the block, do nothing
-                Bukkit.broadcastMessage("Air case: " + airCase);
+
+                // If the hook is in the air, we will handle it differently than if it is on a block
                 if (airCase) {
                     handleAirHook(event, player, hookType);
                 } else {
                     handleBlockHook(event, player, hookType);
                 }
 
-                CooldownSystem.startCooldown(player, itemInHand, hookType.getCooldown());
+                if (plugin.isServerVersionAtLeast1_21_2())
+                    CooldownSystem.startCooldown(player, itemInHand, hookType.getCooldown());
 
                 break;
             case CAUGHT_FISH: // Pulling the hook back from water after catching a fish
@@ -125,6 +115,15 @@ public class PlayerListener implements Listener {
     }
 
 
+    /**
+     * Finds the nearest solid block location around the given location.
+     * If no solid blocks are found, returns the original location.
+     * Use 6 neighboring locations to check for solid blocks
+     * Could have used all 3x3x3 blocks around the location, but that would be too many checks and could cause performance issues.
+     *
+     * @param loc The location to check for nearby solid blocks.
+     * @return The nearest solid block location or the original location if none found.
+     */
     private Location getNearestBlockLocation(Location loc) {
         Block block = loc.getWorld().getBlockAt(loc);
         List<Location> neighboringLocations = new ArrayList<>();
@@ -142,7 +141,7 @@ public class PlayerListener implements Listener {
             if (!locNeighbor.getBlock().getType().isSolid()) {
                 continue; // Skip air blocks
             }
-            Bukkit.broadcastMessage("Checking block at " + locNeighbor.toString());
+            Bukkit.broadcastMessage("Checking block at " + locNeighbor);
             double distance = loc.distanceSquared(locNeighbor);
             if (distance < nearestDistance) {
                 nearestDistance = distance;
@@ -156,12 +155,21 @@ public class PlayerListener implements Listener {
         return nearest;
     }
 
+    /**
+     * Handles the case when the hook is thrown.
+     * Adjusts the velocity based on the player's pitch and hook type.
+     *
+     * @param event    The PlayerFishEvent containing the hook and player information.
+     * @param player   The player who threw the hook.
+     * @param hookType The type of grappling hook being used.
+     */
     private void handleThrownHook(PlayerFishEvent event, Player player, GrapplingHookType hookType) {
         ItemStack itemInHand = player.getInventory().getItemInMainHand();
         if (!HookAPI.isGrapplingHook(itemInHand))
             return;
 
-        // Near vertical pitch, reduce x and z velocity to make it easier to travel up or down
+        // Near vertical pitch, reduce hook's x and z velocity to make it easier to travel up or down
+        // Also reduce the y velocity to prevent the hook from flying too high (Can be adjusted in the config anyway - just makes it more balanced for default 1.0 multipliers)
         double pitchDifference = 90 - Math.abs(player.getLocation().getPitch());
         if (pitchDifference < 10) {
             Vector multiply = new Vector((pitchDifference * pitchDifference) / 100, 0.8, (pitchDifference * pitchDifference) / 100);
@@ -170,12 +178,22 @@ public class PlayerListener implements Listener {
         event.getHook().setVelocity(event.getHook().getVelocity().multiply(hookType.getVelocityThrowMultiplier()));
     }
 
+    /**
+     * Handles the case when the hook is pulled back while in the air.
+     * Adjusts the player's velocity based on the hook's location and player's pitch.
+     *
+     * @param event    The PlayerFishEvent containing the hook and player information.
+     * @param player   The player who is pulling the hook back.
+     * @param hookType The type of grappling hook being used.
+     */
     private void handleAirHook(PlayerFishEvent event, Player player, GrapplingHookType hookType) {
         ItemStack itemInHand = player.getInventory().getItemInMainHand();
         if (!HookAPI.isGrapplingHook(itemInHand)) return;
 
-        double pitchDiff = 90 - Math.abs(player.getLocation().getPitch());
-        double y = -0.0063 * pitchDiff + 1.0;
+        // Convert pitch to factor: straight ahead = 0° , straight up/down = +/- 90°
+        double pitchDifference = 90 - Math.abs(player.getLocation().getPitch());
+        // Based on how high the player is looking, adjust the Y velocity
+        double y = -0.006 * pitchDifference + 1;
 
         // Tick 0: small vertical lift to prevent ground drag
         Bukkit.getScheduler().runTask(plugin, () -> {
@@ -183,7 +201,7 @@ public class PlayerListener implements Listener {
             player.setVelocity(v0);
         });
 
-        // Tick 1: nerf horizontal speed and inject controlled Y
+        // Tick 1: nerf horizontal player speed and inject controlled Y
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             Vector v1 = player.getVelocity().clone();
             v1.multiply(new Vector(0.3, 1, 0.3));
@@ -199,8 +217,7 @@ public class PlayerListener implements Listener {
                     .multiply(hookType.getVelocityPullMultiplier());
 
             Vector v2 = player.getVelocity().clone();
-            // If you want zero extra vertical pull from the vector, multiply by (1,0,1) instead.
-            v2.add(pull.multiply(new Vector(1, 1, 1)));
+            v2.add(pull);
             player.setVelocity(v2);
         }, 2L);
     }
@@ -213,8 +230,10 @@ public class PlayerListener implements Listener {
         Block target = getNearestBlockLocation(event.getHook().getLocation()).getBlock();
         if (!HookAPI.canHookOntoBlock(hookType, target)) return;
 
-        double pitchDiff = 90 - Math.abs(player.getLocation().getPitch());
-        double y = -0.0063 * pitchDiff + 1.0;
+        // Convert pitch to factor: straight ahead = 0° , straight up/down = +/- 90°
+        double pitchDifference = 90 - Math.abs(player.getLocation().getPitch());
+        // Based on how high the player is looking, adjust the Y velocity
+        double y = -0.006 * pitchDifference + 1;
 
         // Tick 0: small vertical lift so the player unsticks from ground
         Bukkit.getScheduler().runTask(plugin, () -> {
@@ -222,7 +241,7 @@ public class PlayerListener implements Listener {
             player.setVelocity(v0);
         });
 
-        // Tick 1: nerf horizontal speed and inject controlled Y
+        // Tick 1: nerf horizontal speed player and inject controlled Y
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             Vector v1 = player.getVelocity().clone();
             v1.multiply(new Vector(0.3, 1, 0.3));
@@ -239,7 +258,7 @@ public class PlayerListener implements Listener {
 
             // preserve current Y (already set) and add pull mostly to XZ
             Vector v2 = player.getVelocity().clone();
-            v2.add(pull.multiply(new Vector(1, 1, 1))); // or new Vector(1, 0, 1) if you want no extra Y
+            v2.add(pull);
             player.setVelocity(v2);
         }, 2L);
     }

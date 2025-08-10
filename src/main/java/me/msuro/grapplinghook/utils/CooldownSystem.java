@@ -1,7 +1,6 @@
 package me.msuro.grapplinghook.utils;
 
 import me.msuro.grapplinghook.GrapplingHook;
-import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -11,6 +10,7 @@ import org.bukkit.persistence.PersistentDataType;
 
 public class CooldownSystem {
 
+    @SuppressWarnings("UnstableApiUsage")
     public static void startCooldown(Player player, ItemStack itemStack, int duration) {
         GrapplingHook plugin = GrapplingHook.getPlugin();
         // UseCooldownComponent was introduced in 1.21.2
