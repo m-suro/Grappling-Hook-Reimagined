@@ -169,11 +169,14 @@ public class GrapplingHookType {
         GrapplingHook plugin = GrapplingHook.getPlugin();
         YamlConfiguration config = YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "hooks.yml"));
 
-        String itemName = config.getString("hooks." + name + ".item_display.name", name);
+        String usesPlaceholder = maxUses == -1 ? "∞" : String.valueOf(maxUses - uses);
+
+        String itemName = config.getString("hooks." + name + ".item_display.name", name).replace("[uses]", usesPlaceholder);
         List<String> itemLore = config.getStringList("hooks." + name + ".item_display.description");
         meta.setDisplayName(plugin.formatMessage(itemName));
         itemLore.replaceAll(line -> plugin.formatMessage(line));
         if (!itemLore.isEmpty()) {
+            itemLore.replaceAll(line -> line.replace("[uses]", usesPlaceholder));
             meta.setLore(itemLore);
         }
 
@@ -256,5 +259,7 @@ public class GrapplingHookType {
                 ", itemStack=" + (itemStack != null ? itemStack.getType() : "null") +
                 '}';
     }
+
+
 
 }

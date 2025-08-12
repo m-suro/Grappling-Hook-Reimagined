@@ -1,5 +1,6 @@
 package me.msuro.grapplinghook;
 
+
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandMap;

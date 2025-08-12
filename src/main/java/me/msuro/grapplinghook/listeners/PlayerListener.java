@@ -20,6 +20,8 @@ import org.bukkit.util.Vector;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.bukkit.event.player.PlayerFishEvent.State.FISHING;
+
 @SuppressWarnings({"UnstableApiUsage", "deprecation"})
 public class PlayerListener implements Listener {
 
@@ -39,7 +41,15 @@ public class PlayerListener implements Listener {
         if (!HookAPI.isGrapplingHook(itemInHand))
             return;
 
+        if(event.getState() != FISHING)
+            event.setCancelled(true);
+
         GrapplingHookType hookType = new GrapplingHookType(null).fromItemStack(itemInHand);
+
+        if(!HookAPI.canUse(hookType, player)) {
+            event.getHook().remove(); // Remove the hook entity if the player cannot use the hook
+            return; // If the player cannot use the hook, do nothing
+        }
 
         switch (event.getState()) {
             case FISHING: // Throwing the hook
@@ -58,13 +68,18 @@ public class PlayerListener implements Listener {
             case FAILED_ATTEMPT: // Pulling the hook back from water after failing to catch a fish
                 Block nearestBlock = getNearestBlockLocation(event.getHook().getLocation()).getBlock();
                 if (!HookAPI.canHookOntoBlock(hookType, nearestBlock)) {
+                    event.getHook().remove();
                     return; // If the hook cannot hook onto the block, do nothing
                 }
 
                 handleBlockHook(event, player, hookType);
 
+                HookAPI.setUses(itemInHand, hookType.getUses()+1);
+
                 if (plugin.isServerVersionAtLeast1_21_2())
                     CooldownSystem.startCooldown(player, itemInHand, hookType.getCooldown());
+
+                event.getHook().remove(); // Remove the hook entity after pulling it back
 
                 break;
             case REEL_IN: // Pulling the hook back mid-air
@@ -87,8 +102,10 @@ public class PlayerListener implements Listener {
                 } else {
                     block = event.getHook().getLocation().getBlock();
                 }
-                if (!HookAPI.canHookOntoBlock(hookType, block))
+                if (!HookAPI.canHookOntoBlock(hookType, block)) {
+                    event.getHook().remove();
                     return; // If the hook cannot hook onto the block, do nothing
+                }
 
                 // If the hook is in the air, we will handle it differently than if it is on a block
                 if (airCase) {
@@ -97,8 +114,12 @@ public class PlayerListener implements Listener {
                     handleBlockHook(event, player, hookType);
                 }
 
+                HookAPI.setUses(itemInHand, hookType.getUses()+1);
+
                 if (plugin.isServerVersionAtLeast1_21_2())
                     CooldownSystem.startCooldown(player, itemInHand, hookType.getCooldown());
+
+                event.getHook().remove(); // Remove the hook entity after pulling it back
 
                 break;
             case CAUGHT_FISH: // Pulling the hook back from water after catching a fish
@@ -107,7 +128,6 @@ public class PlayerListener implements Listener {
                     event.getCaught().remove(); // Remove the caught fish entity
                     event.setExpToDrop(0); // No experience drop
                 }
-                event.setCancelled(true); // Cancel the event to prevent further processing
                 break;
             default:
                 break;
@@ -141,7 +161,6 @@ public class PlayerListener implements Listener {
             if (!locNeighbor.getBlock().getType().isSolid()) {
                 continue; // Skip air blocks
             }
-            Bukkit.broadcastMessage("Checking block at " + locNeighbor);
             double distance = loc.distanceSquared(locNeighbor);
             if (distance < nearestDistance) {
                 nearestDistance = distance;
@@ -149,7 +168,6 @@ public class PlayerListener implements Listener {
             }
         }
         if (nearest == null) {
-            Bukkit.broadcastMessage("No solid blocks found near the hook location.");
             return loc; // If no solid blocks found, return the original location
         }
         return nearest;
