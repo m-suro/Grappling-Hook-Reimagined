@@ -1,40 +1,53 @@
 package me.msuro.grapplinghook;
 
 import lombok.Getter;
+import me.msuro.grapplinghook.listeners.InventoryListener;
 import me.msuro.grapplinghook.listeners.PlayerListener;
 import me.msuro.grapplinghook.utils.CooldownSystem;
+import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.command.CommandMap;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.*;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class GrapplingHook extends JavaPlugin{
-	
+
+    @Getter
 	private PlayerListener playerListener = new PlayerListener(this);
+    @Getter
+    private InventoryListener inventoryListener = new InventoryListener(this);
+    @Getter
 	private CommandHandler commandHandler;
 	@Getter
     private static GrapplingHook plugin;
-	protected FileConfiguration config;
-
-	boolean usePerms = false;
-	private boolean teleportHooked = false;
-    private boolean consumeUseOnSlowfall = false;
-	private String commandAlias;
 
     @Getter
     private boolean isServerVersionAtLeast1_21_2 = false;
 
+    @Getter
+    private YamlConfiguration hooksConfig;
+    @Getter
+    private YamlConfiguration config;
 
-	public void onEnable(){
+    Metrics metrics;
+
+
+    public void onEnable(){
 		plugin = this;
+
+        // bStats - https://bstats.org/plugin/bukkit/Grappling%20Hook/26907
+        int pluginId = 26907;
+        metrics = new Metrics(this, pluginId);
 
 
         try {
@@ -56,44 +69,46 @@ public class GrapplingHook extends JavaPlugin{
 
         if (!isServerVersionAtLeast1_21_2) {
             getLogger().warning("This plugin is working best on 1.21.2+ versions of Minecraft.");
-            getLogger().warning("The new cooldown system is not available on versions below 1.21.2 as the API does not support it.");
+            getLogger().warning("The cooldown system is not available on versions below 1.21.2 as the API does not support it.");
             getLogger().warning("Please consider updating your server to 1.21.2+ for the best experience.");
         }
 
 		getServer().getPluginManager().registerEvents(playerListener, this);
-		
+		getServer().getPluginManager().registerEvents(inventoryListener, this);
+
 		File configFile = new File(this.getDataFolder() + "/config.yml");
         checkAndCreateConfigFile("config.yml");
         checkAndCreateConfigFile("hooks.yml");
 		config = YamlConfiguration.loadConfiguration(configFile);
+        hooksConfig = YamlConfiguration.loadConfiguration(new File(this.getDataFolder(), "hooks.yml"));
 
-		commandAlias = config.getString("command");
 
-
-		commandHandler = new CommandHandler(this, "grapplinghook.operator", commandAlias, "Base command for the GrapplingHook plugin", "/gh", new ArrayList(Arrays.asList(commandAlias)));
+		commandHandler = new CommandHandler(this, "grapplinghook.operator", "gh", "Base command for the GrapplingHook plugin", "/gh", new ArrayList(Arrays.asList("gh")));
 	}
 
 	public void onDisable(){
+        metrics.shutdown();
+        HandlerList.unregisterAll(playerListener);
+        HandlerList.unregisterAll(inventoryListener);
+        if (commandHandler != null) {
+            try {
+                Field commandMapField = Bukkit.getServer().getClass().getDeclaredField("commandMap");
+                commandMapField.setAccessible(true);
+                CommandMap commandMap = (CommandMap) commandMapField.get(Bukkit.getServer());
+                commandMap.getKnownCommands().remove(commandHandler.getName());
+            } catch (NoSuchFieldException | IllegalAccessException e) {
+                getLogger().severe("Failed to unregister command handler: " + e.getMessage());
+            }
+        }
+
 	}
 
 	public void reload(){
 		HandlerList.unregisterAll(playerListener);
+		HandlerList.unregisterAll(inventoryListener);
 
 		onDisable();
 		onEnable();
-	}
-
-
-    public PlayerListener getPlayerListener(){
-		return playerListener;
-	}
-
-	public boolean isConsumeUseOnSlowfall(){
-		return consumeUseOnSlowfall;
-	}
-
-	public boolean getTeleportHooked(){
-		return teleportHooked;
 	}
 
 	private void copy(InputStream in, File file) {
@@ -106,6 +121,7 @@ public class GrapplingHook extends JavaPlugin{
 			}
 			out.close();
 			in.close();
+            getLogger().info("Config file " + file.getName() + " created successfully.");
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -135,6 +151,7 @@ public class GrapplingHook extends JavaPlugin{
         if (message == null || message.isEmpty()) {
             return "";
         }
+        message = message.replace("[prefix]", config.getString("prefix", "[GrapplingHook]"));
         Pattern HEX_PATTERN = Pattern.compile("&#([A-Fa-f0-9]{6})");
         Matcher matcher = HEX_PATTERN.matcher(message);
         StringBuilder formattedMessage = new StringBuilder();

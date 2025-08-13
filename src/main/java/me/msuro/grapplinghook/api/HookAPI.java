@@ -75,61 +75,106 @@ public final class HookAPI {
         }
     }
 
-    public static boolean canUse(GrapplingHookType hookType, Player player) {
+    /**
+     * Checks if the grappling hook can be used by the player.
+     * Checks:
+     * - Uses limit (if set)
+     * - Cooldown (if set)
+     * @param hookType The type of the grappling hook.
+     * @param player The player using the hook.
+     * @return null if the hook can be used, otherwise a string indicating the reason why it cannot be used:
+     * - "USE_LIMIT_REACHED" if the hook has reached its maximum uses.
+     * - "COOLDOWN_ACTIVE" if the hook is on cooldown.
+        */
+    public static String canUse(GrapplingHookType hookType, Player player) {
         if (hookType.getMaxUses() != -1) {
             int uses = hookType.getUses();
             if (uses >= hookType.getMaxUses()) {
-                player.sendActionBar(GrapplingHook.getPlugin().formatMessage("&8[&b\uD83C\uDFA3&8]&7 This hook has ran out of uses!"));
-                return false;
+                return "USE_LIMIT_REACHED";
             }
         }
-        return true;
+        PersistentDataContainer persistentData = player.getPersistentDataContainer();
+        NamespacedKey cooldownKey = new NamespacedKey(GrapplingHook.getPlugin(), "cooldown_" + hookType.getName());
+        if (persistentData.has(cooldownKey, PersistentDataType.LONG)) {
+            long cooldownEnd = persistentData.get(cooldownKey, PersistentDataType.LONG);
+            long currentTime = System.currentTimeMillis();
+            if (currentTime < cooldownEnd) {
+                //long remainingTime = (cooldownEnd - currentTime) / 1000;
+                return "COOLDOWN_ACTIVE;" + (cooldownEnd - currentTime) / 1000;
+            }
+        }
+        return null;
     }
 
-    public static boolean setUses(ItemStack is, int uses) {
+    /**
+     * Sets the number of uses for a grappling hook item.
+     * Updates the item's durability, display name and lore accordingly.
+     * Depending on config settings if the hook has reached its maximum uses, ut it will either be destroyed or the durability will be set to maximum damage.
+     * @param is The ItemStack representing the grappling hook.
+     * @param uses The number of uses to set (must be non-negative).
+     * @return true if the uses were set successfully, false otherwise.
+     */
+    public static boolean setUses(Player p, ItemStack is, int uses) {
         if (uses < 0) {
             Bukkit.getLogger().warning("Cannot set uses to a negative value: " + uses);
             return false;
         }
-        Damageable meta = (Damageable) is.getItemMeta();
-        if (meta == null) {
-            Bukkit.getLogger().warning("ItemMeta is null for item: " + is.getType());
-            return false;
+        ItemMeta im = is.getItemMeta();
+        if (im instanceof Damageable meta) {
+            if (meta == null) {
+                Bukkit.getLogger().warning("ItemMeta is null for item: " + is.getType());
+                return false;
+            }
+
+            // Set how many times this hook has been used
+            PersistentDataContainer persistentData = meta.getPersistentDataContainer();
+            persistentData.set(new NamespacedKey(GrapplingHook.getPlugin(), "uses"), PersistentDataType.INTEGER, uses);
+
+            // Update the durability based on uses (0 uses -> full durability, max uses -> max damage before breaking)
+            GrapplingHookType hookType = new GrapplingHookType(null).fromItemStack(is);
+            if (hookType.getMaxUses() > 0) {
+                int maxDurability = 64;
+                double ratio = (double) uses / (double) hookType.getMaxUses();
+                if (ratio >= 1.0) {
+                    YamlConfiguration config = GrapplingHook.getPlugin().getConfig();
+                    boolean destroyOnMaxUses = config.getBoolean("destroy-hook-on-use-limit", false);
+                    meta.setDamage(maxDurability - 1);
+                    if(destroyOnMaxUses) {
+                        is.setAmount(0); // Remove the item if it has reached its max uses
+                        p.playSound(p.getLocation(), Sound.ENTITY_ITEM_BREAK, 1.0f, 1.0f);
+                        p.sendMessage(GrapplingHook.getPlugin().formatMessage(config.getString("messages.hook-destroyed", "Your grappling hook has reached its maximum uses and has been destroyed.")
+                                .replace("[hookname]", im.getDisplayName())));
+                    }
+                } else {
+                    // Calculate damage needed to apply, ratio = percentage of uses used (0.0 to 1.0)
+                    // multiply by max durability to get the damage value according to item
+                    int damage = (int) Math.round(ratio * maxDurability);
+
+                    damage = Math.min(damage, maxDurability - 1);
+
+                    meta.setDamage(damage);
+                }
+            } else {
+                meta.setDamage(0);
+            }
+
+            // Update [uses] in item meta
+            String placeholder = hookType.getMaxUses() == -1 ? "∞" : String.valueOf(hookType.getMaxUses() - uses);
+
+            YamlConfiguration config = YamlConfiguration.loadConfiguration(new File(GrapplingHook.getPlugin().getDataFolder(), "hooks.yml"));
+            String itemName = config.getString("hooks." + hookType.getName() + ".item_display.name", "Grappling Hook");
+            itemName = itemName.replace("[uses]", placeholder);
+            meta.setDisplayName(GrapplingHook.getPlugin().formatMessage(itemName));
+
+            List<String> itemLore = config.getStringList("hooks." + hookType.getName() + ".item_display.description");
+            itemLore = itemLore.stream()
+                    .map(line -> line.replace("[uses]", placeholder))
+                    .map(GrapplingHook.getPlugin()::formatMessage)
+                    .toList();
+            meta.setLore(itemLore);
+
+            is.setItemMeta(meta);
         }
-
-        PersistentDataContainer persistentData = meta.getPersistentDataContainer();
-        persistentData.set(new NamespacedKey(GrapplingHook.getPlugin(), "uses"), PersistentDataType.INTEGER, uses);
-
-        GrapplingHookType hookType = new GrapplingHookType(null).fromItemStack(is);
-        if (hookType.getMaxUses() > 0) {
-            int maxDurability = 64;
-            double ratio = (double) uses / (double) hookType.getMaxUses();
-            int damage = (int) Math.round(ratio * maxDurability);
-
-            damage = Math.min(damage, maxDurability-1); // Ensure damage does not exceed max durability so it doesn't break
-
-            meta.setDamage(damage);
-        } else {
-            // -1 or 0: unlimited or disabled durability tracking; clear visible damage
-            meta.setDamage(0);
-        }
-
-        // Update [uses] in item meta
-        String placeholder = hookType.getMaxUses() == -1 ? "∞" : String.valueOf(hookType.getMaxUses()-uses);
-
-        YamlConfiguration config = YamlConfiguration.loadConfiguration(new File(GrapplingHook.getPlugin().getDataFolder(), "hooks.yml"));
-        String itemName = config.getString("hooks." + hookType.getName() + ".item_display.name", "Grappling Hook");
-        itemName = itemName.replace("[uses]", placeholder);
-        meta.setDisplayName(GrapplingHook.getPlugin().formatMessage(itemName));
-
-        List<String> itemLore = config.getStringList("hooks." + hookType.getName() + ".item_display.description");
-        itemLore = itemLore.stream()
-                .map(line -> line.replace("[uses]", placeholder))
-                .map(GrapplingHook.getPlugin()::formatMessage)
-                .toList();
-        meta.setLore(itemLore);
-
-        is.setItemMeta(meta);
         return true;
     }
 }

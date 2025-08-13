@@ -70,7 +70,7 @@ public class GrapplingHookType {
 
     public GrapplingHookType fromConfig() {
         GrapplingHook plugin = GrapplingHook.getPlugin();
-        YamlConfiguration config = YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "hooks.yml"));
+        YamlConfiguration config = plugin.getHooksConfig();
         String path = "hooks." + name + ".settings.";
 
         this.maxUses = config.getInt(path + "max_uses", -1);
@@ -167,7 +167,7 @@ public class GrapplingHookType {
         }
 
         GrapplingHook plugin = GrapplingHook.getPlugin();
-        YamlConfiguration config = YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "hooks.yml"));
+        YamlConfiguration config = plugin.getHooksConfig();
 
         String usesPlaceholder = maxUses == -1 ? "∞" : String.valueOf(maxUses - uses);
 
@@ -195,7 +195,7 @@ public class GrapplingHookType {
         }
 
         GrapplingHook plugin = GrapplingHook.getPlugin();
-        YamlConfiguration config = YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "hooks.yml"));
+        YamlConfiguration config = plugin.getHooksConfig();
         String path = "hooks." + name + ".settings.";
 
         if (maxUses == null)

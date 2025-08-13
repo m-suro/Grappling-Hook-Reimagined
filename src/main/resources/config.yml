@@ -1,3 +1,40 @@
 # Thanks for downloading Grappling Hook Reimagined! #
 # This is a fork of the original Grappling Hook by SnowGears [https://www.spigotmc.org/resources/grappling-hook.22854/]
 # IF YOU HAVE A QUESTION COME JOIN MY DISCORD: XXX #
+prefix: "&8[&b🎣&8]&r"
+
+# Should the fishing hook be destroyed when it reaches the use limit? If not, it will be stuck at 0
+# If false the hook can still be repaired using an anvil or /repair command
+destroy-hook-on-use-limit: false
+
+messages:
+  # [maxuses] gets replaced with actual number
+  use-limit-reached: "[prefix] &7This hook has ran out of uses and is now broken."
+  # [hookname] - hook's item display name
+  hook-destroyed-message: "[prefix] &7Your hook has reached its use limit and has been destroyed."
+
+  inventory-combine-block: "[prefix] &7Grappling hooks cannot be combined or modified in [invtype]."
+
+  # Command messages
+  commands-help: "[prefix] &7GrapplingHook Commands:"
+  command-reload: "&8» &f/[command] reload &8-&7 reload the plugin"
+  command-give-self: "&8» &f/[command] give <hook_id> &8-&7 give yourself a hook"
+  command-give-player: "&8» &f/[command] give <hook_id> <player> &8-&7 give player a hook"
+  console-give-command: "/[command] give <hook_id> <player> - give player a hook"
+  plugin-reloaded-player: "[prefix] &aGrapplingHook has been reloaded."
+  plugin-reloaded-console: "[GrapplingHook] Reloaded plugin."
+  give-all-hooks-success: "[prefix] &aGave all grappling hooks to [player]"
+  give-hook-failed: "[prefix] &cFailed to give grappling hook with id: [hook_id]"
+  console-only-command: "This command can only be used by players."
+
+  # Missing command messages
+  hook-not-specified: "[prefix] &cPlease specify a hook ID. Usage: /[command] give <hook_id>"
+  hook-not-found: "[prefix] &cHook with ID '[hook_id]' not found."
+  no-permission: "[prefix] &cYou don't have permission to use this command."
+  player-not-specified: "[prefix] &cPlease specify a player. Usage: /[command] give <hook_id> <player>"
+  player-not-found: "[prefix] &cPlayer '[player]' not found or is offline."
+  inventory-full: "[prefix] &cYour inventory is full. Cannot give the hook."
+  inventory-full-player: "[prefix] &cThe player's inventory is full. Cannot give the hook."
+  hook-given-self: "[prefix] &aYou have been given a [hook_id] grappling hook."
+  hook-given-player: "[prefix] &aGave [hook_id] grappling hook to [player]."
+  hook-received: "[prefix] &aYou received a [hook_id] grappling hook."

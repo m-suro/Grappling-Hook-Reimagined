@@ -34,22 +34,39 @@ public class PlayerListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onGrapplingHookAction(PlayerFishEvent event) {
         Player player = event.getPlayer();
-        if (!HookAPI.isGrapplingHook(player.getInventory().getItemInMainHand()))
-            return;
 
         ItemStack itemInHand = player.getInventory().getItemInMainHand();
         if (!HookAPI.isGrapplingHook(itemInHand))
             return;
 
+        // Item is a grappling hook, so we don't care about any vanilla mechanics
+        // as long as they are not throwing the hook, we cancel the event
+        // Since we are canceling the event, we have to remove the hook entity manually later
         if(event.getState() != FISHING)
             event.setCancelled(true);
 
         GrapplingHookType hookType = new GrapplingHookType(null).fromItemStack(itemInHand);
 
-        if(!HookAPI.canUse(hookType, player)) {
+
+        // Check if the player can use the hook
+        // If the player cannot use the hook, we remove the hook entity and send a message
+        String canUseResult = HookAPI.canUse(hookType, player);
+        if (canUseResult != null) {
+            String[] canUseParts = canUseResult.split(";");
             event.getHook().remove(); // Remove the hook entity if the player cannot use the hook
-            return; // If the player cannot use the hook, do nothing
+            switch (canUseParts[0]) {
+                case "USE_LIMIT_REACHED":
+                    player.sendActionBar(GrapplingHook.getPlugin().formatMessage(plugin.getConfig().getString("messages.use-limit-reached"))
+                            .replace("[maxuses]", String.valueOf(hookType.getMaxUses())));
+                    break;
+                case "COOLDOWN_ACTIVE":
+                    // Hardcoded message because afaik there is no way to actually reach it - the cooldown is handled directly by minecraft
+                    player.sendActionBar(GrapplingHook.getPlugin().formatMessage("&8[&b\uD83C\uDFA3&8]&7 You cannot use this hook yet! Cooldown active for " + canUseParts[1] + " seconds."));
+                    break;
+            }
+            return;
         }
+
 
         switch (event.getState()) {
             case FISHING: // Throwing the hook
@@ -74,7 +91,7 @@ public class PlayerListener implements Listener {
 
                 handleBlockHook(event, player, hookType);
 
-                HookAPI.setUses(itemInHand, hookType.getUses()+1);
+                HookAPI.setUses(player, itemInHand, hookType.getUses()+1);
 
                 if (plugin.isServerVersionAtLeast1_21_2())
                     CooldownSystem.startCooldown(player, itemInHand, hookType.getCooldown());
@@ -114,7 +131,7 @@ public class PlayerListener implements Listener {
                     handleBlockHook(event, player, hookType);
                 }
 
-                HookAPI.setUses(itemInHand, hookType.getUses()+1);
+                HookAPI.setUses(player, itemInHand, hookType.getUses()+1);
 
                 if (plugin.isServerVersionAtLeast1_21_2())
                     CooldownSystem.startCooldown(player, itemInHand, hookType.getCooldown());
