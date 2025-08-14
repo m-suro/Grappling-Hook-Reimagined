@@ -67,6 +67,7 @@ public class PlayerListener implements Listener {
             return;
         }
 
+        //Bukkit.broadcastMessage(event.getState().name());
 
         switch (event.getState()) {
             case FISHING: // Throwing the hook
@@ -99,7 +100,7 @@ public class PlayerListener implements Listener {
                 event.getHook().remove(); // Remove the hook entity after pulling it back
 
                 break;
-            case REEL_IN: // Pulling the hook back mid-air
+            case REEL_IN: // Pulling the hook back mid-air/block/
                 /*
                  * Determine which block the hook is "attached" to when reeling in.
                  * - If the hook's location is near a block boundary (e.g., 0.125 or 0.875 in X or Z),
@@ -112,9 +113,11 @@ public class PlayerListener implements Listener {
                 boolean airCase = true;
                 double relativeX = Math.abs(event.getHook().getLocation().getX() % 1);
                 double relativeZ = Math.abs(event.getHook().getLocation().getZ() % 1);
+                Bukkit.broadcastMessage("relativeX: " + relativeX + ", relativeZ: " + relativeZ);
                 if(relativeX == 0.125 || relativeX == 0.875 ||
                         relativeZ == 0.125 || relativeZ == 0.875) {
                     block = getNearestBlockLocation(event.getHook().getLocation()).getBlock();
+                    Bukkit.broadcastMessage("Using nearest block: " + block.getType());
                     airCase = false;
                 } else {
                     block = event.getHook().getLocation().getBlock();
@@ -146,6 +149,21 @@ public class PlayerListener implements Listener {
                     event.setExpToDrop(0); // No experience drop
                 }
                 break;
+            case CAUGHT_ENTITY:
+                if(event.getHook().getHookedEntity() != null) {
+
+                    if(!HookAPI.canHookOntoEntity(hookType, event.getHook().getHookedEntity().getType())) {
+                        event.getHook().remove(); // If the hook cannot pull the entity, remove the hook entity
+                        return;
+                    }
+
+                    handleEntityPull(event, player, hookType);
+                    HookAPI.setUses(player, itemInHand, hookType.getUses()+1);
+                    if (plugin.isServerVersionAtLeast1_21_2())
+                        CooldownSystem.startCooldown(player, itemInHand, hookType.getCooldown());
+                    event.getHook().remove(); // Remove the hook entity after pulling it back
+                    return;
+                }
             default:
                 break;
         }
@@ -162,21 +180,23 @@ public class PlayerListener implements Listener {
      * @return The nearest solid block location or the original location if none found.
      */
     private Location getNearestBlockLocation(Location loc) {
-        Block block = loc.getWorld().getBlockAt(loc);
         List<Location> neighboringLocations = new ArrayList<>();
-        neighboringLocations.add(block.getLocation().clone().add(0.1, 0, 0));
-        neighboringLocations.add(block.getLocation().clone().add(-0.1, 0, 0));
-        neighboringLocations.add(block.getLocation().clone().add(0, 0, 0.1));
-        neighboringLocations.add(block.getLocation().clone().add(0, 0, -0.1));
-        neighboringLocations.add(block.getLocation().clone().add(0, 0.1, 0));
-        neighboringLocations.add(block.getLocation().clone().add(0, -0.1, 0));
+
+        // Use the hook's actual location as the starting point
+        neighboringLocations.add(loc.clone().add(1, 0, 0));   // East
+        neighboringLocations.add(loc.clone().add(-1, 0, 0));  // West
+        neighboringLocations.add(loc.clone().add(0, 0, 1));   // South
+        neighboringLocations.add(loc.clone().add(0, 0, -1));  // North
+        neighboringLocations.add(loc.clone().add(0, 1, 0));   // Up
+        neighboringLocations.add(loc.clone().add(0, -1, 0));  // Down
 
         Location nearest = null;
         double nearestDistance = Double.MAX_VALUE;
 
         for (Location locNeighbor : neighboringLocations) {
-            if (!locNeighbor.getBlock().getType().isSolid()) {
-                continue; // Skip air blocks
+            Block neighborBlock = locNeighbor.getBlock();
+            if (!neighborBlock.getType().isSolid()) {
+                continue;
             }
             double distance = loc.distanceSquared(locNeighbor);
             if (distance < nearestDistance) {
@@ -184,10 +204,8 @@ public class PlayerListener implements Listener {
                 nearest = locNeighbor;
             }
         }
-        if (nearest == null) {
-            return loc; // If no solid blocks found, return the original location
-        }
-        return nearest;
+
+        return nearest != null ? nearest : loc;
     }
 
     /**
@@ -296,6 +314,25 @@ public class PlayerListener implements Listener {
             v2.add(pull);
             player.setVelocity(v2);
         }, 2L);
+    }
+
+    private void handleEntityPull(PlayerFishEvent event, Player player, GrapplingHookType hookType) {
+        if (event.getHook().getHookedEntity() == null) return; // If the hook is not hooked onto an entity, do nothing
+
+        ItemStack itemInHand = player.getInventory().getItemInMainHand();
+        if (!HookAPI.isGrapplingHook(itemInHand)) return;
+
+        if (!HookAPI.canHookOntoEntity(hookType, event.getHook().getHookedEntity().getType())) return;
+
+        // Pull the entity towards the player
+        Vector pull = player.getLocation().toVector()
+                .subtract(event.getHook().getHookedEntity().getLocation().toVector())
+                .normalize()
+                .multiply(hookType.getVelocityPullMultiplier());
+
+        Vector v2 = event.getHook().getHookedEntity().getVelocity().clone();
+        v2.add(pull);
+        event.getHook().getHookedEntity().setVelocity(v2);
     }
 
 }

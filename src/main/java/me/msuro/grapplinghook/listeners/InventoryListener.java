@@ -130,6 +130,7 @@ public class InventoryListener implements Listener {
         ItemStack cursor = event.getCursor();
         ItemStack current = event.getCurrentItem();
 
+        if(event.getSlotType() != InventoryType.SlotType.CRAFTING) return;
         // Check if placing a grappling hook in crafting grid
         if (cursor != null && HookAPI.isGrapplingHook(cursor) && event.getSlot() < 9) {
             event.setCancelled(true);
