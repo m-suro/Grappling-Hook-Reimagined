@@ -10,7 +10,6 @@ import org.yaml.snakeyaml.Yaml;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * A class to update/add new sections/keys to your config while keeping your current values and keeping your comments
@@ -33,7 +32,11 @@ public class ConfigUpdater {
      */
     public static void update(Plugin plugin, String resourceName, File toUpdate, List<String> ignoredSections) throws IOException {
         BufferedReader newReader = new BufferedReader(new InputStreamReader(plugin.getResource(resourceName), StandardCharsets.UTF_8));
-        List<String> newLines = newReader.lines().collect(Collectors.toList());
+        List<String> newLines = new ArrayList<>();
+        String line;
+        while ((line = newReader.readLine()) != null) {
+            newLines.add(line);
+        }
         newReader.close();
 
         FileConfiguration oldConfig = YamlConfiguration.loadConfiguration(toUpdate);

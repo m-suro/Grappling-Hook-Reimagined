@@ -36,11 +36,17 @@ public final class HookAPI {
         String blocksMode = hookType.getBlocksMode();
         List<String> blocksList = hookType.getBlocksList();
 
-        //Bukkit.broadcastMessage("Checking if hook `" + hookType.getId() + "` can hook onto block: " + blockTypeName + " [List mode = " + blocksMode + "]");
+        //Bukkit.broadcastMessage("Checking if hook `" + hookType.getId() + "` can hook onto block: " + block + " [List mode = " + blocksMode + "]");
         //Bukkit.broadcastMessage("Blocks list: " + blocksList);
 
-        boolean blockInList = blocksList.stream()
-                .anyMatch(blockType -> blockType.equalsIgnoreCase(block));
+        // Use case-insensitive check with simple loop for better performance
+        boolean blockInList = false;
+        for (String blockType : blocksList) {
+            if (blockType.equalsIgnoreCase(block)) {
+                blockInList = true;
+                break;
+            }
+        }
 
         switch (blocksMode.toUpperCase()) {
             case "ALLOW_ONLY":
@@ -59,8 +65,14 @@ public final class HookAPI {
         List<String> entitiesList = hookType.getEntityList();
         String entityTypeName = entityType.name();
 
-        boolean entityInList = entitiesList.stream()
-                .anyMatch(entity -> entity.equalsIgnoreCase(entityTypeName));
+        // Use case-insensitive check with simple loop for better performance
+        boolean entityInList = false;
+        for (String entity : entitiesList) {
+            if (entity.equalsIgnoreCase(entityTypeName)) {
+                entityInList = true;
+                break;
+            }
+        }
 
         switch (entitiesMode.toUpperCase()) {
             case "ALLOW_ONLY":
@@ -130,7 +142,7 @@ public final class HookAPI {
             persistentData.set(new NamespacedKey(GrapplingHook.getPlugin(), "uses"), PersistentDataType.INTEGER, uses);
 
             // Update the durability based on uses (0 uses -> full durability, max uses -> max damage before breaking)
-            GrapplingHookType hookType = new GrapplingHookType(null).fromItemStack(is);
+            GrapplingHookType hookType = GrapplingHookType.fromItemStack(is);
             if (hookType.getMaxUses() > 0) {
                 int maxDurability = 64;
                 double ratio = (double) uses / (double) hookType.getMaxUses();
@@ -160,16 +172,14 @@ public final class HookAPI {
             // Update [uses] in item meta
             String placeholder = hookType.getMaxUses() == -1 ? "∞" : String.valueOf(hookType.getMaxUses() - uses);
 
-            YamlConfiguration config = YamlConfiguration.loadConfiguration(new File(GrapplingHook.getPlugin().getDataFolder(), "hooks.yml"));
+            YamlConfiguration config = GrapplingHook.getPlugin().getHooksConfig();
             String itemName = config.getString("hooks." + hookType.getName() + ".item_display.name", "Grappling Hook");
             itemName = itemName.replace("[uses]", placeholder);
             meta.setDisplayName(GrapplingHook.getPlugin().formatMessage(itemName));
 
             List<String> itemLore = config.getStringList("hooks." + hookType.getName() + ".item_display.description");
-            itemLore = itemLore.stream()
-                    .map(line -> line.replace("[uses]", placeholder))
-                    .map(GrapplingHook.getPlugin()::formatMessage)
-                    .toList();
+            // Combine transformations into a single pass for better performance
+            itemLore.replaceAll(line -> GrapplingHook.getPlugin().formatMessage(line.replace("[uses]", placeholder)));
             meta.setLore(itemLore);
 
             is.setItemMeta(meta);

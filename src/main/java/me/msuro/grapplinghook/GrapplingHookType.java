@@ -120,11 +120,10 @@ public class GrapplingHookType {
      * @return The GrapplingHookType created from the ItemStack.
      * @throws IllegalArgumentException if the ItemStack is not a valid fishing rod or does not contain the required data.
      */
-    public GrapplingHookType fromItemStack(ItemStack is) {
+    public static GrapplingHookType fromItemStack(ItemStack is) {
         if (is == null || is.getType() != FISHING_ROD) {
             throw new IllegalArgumentException("ItemStack must be a valid fishing rod");
         }
-        this.itemStack = is;
         ItemMeta meta = is.getItemMeta();
         if (meta == null) {
             throw new IllegalStateException("ItemMeta is null. Ensure the ItemStack is valid.");
@@ -140,13 +139,15 @@ public class GrapplingHookType {
         if(!container.has(new NamespacedKey(GrapplingHook.getPlugin(), "name"), PersistentDataType.STRING)) {
             throw new IllegalArgumentException("ItemStack does not contain valid GrapplingHook name data");
         }
-        this.id = container.get(new NamespacedKey(GrapplingHook.getPlugin(), "id"), PersistentDataType.INTEGER);
-        this.uses = container.get(new NamespacedKey(GrapplingHook.getPlugin(), "uses"), PersistentDataType.INTEGER);
-        this.name = container.get(new NamespacedKey(GrapplingHook.getPlugin(), "name"), PersistentDataType.STRING);
+        
+        GrapplingHookType hookType = new GrapplingHookType(container.get(new NamespacedKey(GrapplingHook.getPlugin(), "name"), PersistentDataType.STRING));
+        hookType.itemStack = is;
+        hookType.id = container.get(new NamespacedKey(GrapplingHook.getPlugin(), "id"), PersistentDataType.INTEGER);
+        hookType.uses = container.get(new NamespacedKey(GrapplingHook.getPlugin(), "uses"), PersistentDataType.INTEGER);
 
-        fillMissingDataFromConfig();
+        hookType.fillMissingDataFromConfig();
 
-        return this;
+        return hookType;
     }
 
     /**
@@ -179,9 +180,9 @@ public class GrapplingHookType {
         String itemName = config.getString("hooks." + name + ".item_display.name", name).replace("[uses]", usesPlaceholder);
         List<String> itemLore = config.getStringList("hooks." + name + ".item_display.description");
         meta.setDisplayName(plugin.formatMessage(itemName));
-        itemLore.replaceAll(line -> plugin.formatMessage(line));
         if (!itemLore.isEmpty()) {
-            itemLore.replaceAll(line -> line.replace("[uses]", usesPlaceholder));
+            // Combine both transformations into a single pass for better performance
+            itemLore.replaceAll(line -> plugin.formatMessage(line.replace("[uses]", usesPlaceholder)));
             meta.setLore(itemLore);
         }
 

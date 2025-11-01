@@ -48,7 +48,7 @@ public class PlayerListener implements Listener {
         if (event.getState() != FISHING)
             event.setCancelled(true);
 
-        GrapplingHookType hookType = new GrapplingHookType(null).fromItemStack(itemInHand);
+        GrapplingHookType hookType = GrapplingHookType.fromItemStack(itemInHand);
 
 
         // Check if the player can use the hook

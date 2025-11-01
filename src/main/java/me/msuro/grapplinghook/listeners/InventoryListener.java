@@ -31,22 +31,7 @@ public class InventoryListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH)
     public void onAnvilClick(InventoryClickEvent event) {
         if (!(event.getInventory() instanceof AnvilInventory)) return;
-
-        ItemStack cursor = event.getCursor();
-        ItemStack current = event.getCurrentItem();
-
-        // Check if player is trying to place a grappling hook
-        if (cursor != null && HookAPI.isGrapplingHook(cursor)) {
-            event.setCancelled(true);
-            sendBlockMessage((Player) event.getWhoClicked(), "anvil");
-            return;
-        }
-
-        // Check if there's already a grappling hook in the slot being clicked
-        if (current != null && HookAPI.isGrapplingHook(current)) {
-            event.setCancelled(true);
-            sendBlockMessage((Player) event.getWhoClicked(), "anvil");
-        }
+        handleInventoryClick(event, "anvil");
     }
 
     /**
@@ -56,20 +41,7 @@ public class InventoryListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH)
     public void onGrindstoneClick(InventoryClickEvent event) {
         if (!(event.getInventory() instanceof GrindstoneInventory)) return;
-
-        ItemStack cursor = event.getCursor();
-        ItemStack current = event.getCurrentItem();
-
-        if (cursor != null && HookAPI.isGrapplingHook(cursor)) {
-            event.setCancelled(true);
-            sendBlockMessage((Player) event.getWhoClicked(), "grindstone");
-            return;
-        }
-
-        if (current != null && HookAPI.isGrapplingHook(current)) {
-            event.setCancelled(true);
-            sendBlockMessage((Player) event.getWhoClicked(), "grindstone");
-        }
+        handleInventoryClick(event, "grindstone");
     }
 
     /**
@@ -79,20 +51,7 @@ public class InventoryListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH)
     public void onSmithingTableClick(InventoryClickEvent event) {
         if (!(event.getInventory() instanceof SmithingInventory)) return;
-
-        ItemStack cursor = event.getCursor();
-        ItemStack current = event.getCurrentItem();
-
-        if (cursor != null && HookAPI.isGrapplingHook(cursor)) {
-            event.setCancelled(true);
-            sendBlockMessage((Player) event.getWhoClicked(), "smithing table");
-            return;
-        }
-
-        if (current != null && HookAPI.isGrapplingHook(current)) {
-            event.setCancelled(true);
-            sendBlockMessage((Player) event.getWhoClicked(), "smithing table");
-        }
+        handleInventoryClick(event, "smithing table");
     }
 
     /**
@@ -102,20 +61,7 @@ public class InventoryListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH)
     public void onEnchantingTableClick(InventoryClickEvent event) {
         if (!(event.getInventory() instanceof EnchantingInventory)) return;
-
-        ItemStack cursor = event.getCursor();
-        ItemStack current = event.getCurrentItem();
-
-        if (cursor != null && HookAPI.isGrapplingHook(cursor)) {
-            event.setCancelled(true);
-            sendBlockMessage((Player) event.getWhoClicked(), "enchanting table");
-            return;
-        }
-
-        if (current != null && HookAPI.isGrapplingHook(current)) {
-            event.setCancelled(true);
-            sendBlockMessage((Player) event.getWhoClicked(), "enchanting table");
-        }
+        handleInventoryClick(event, "enchanting table");
     }
 
     /**
@@ -152,20 +98,7 @@ public class InventoryListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH)
     public void onCartographyTableClick(InventoryClickEvent event) {
         if (!(event.getInventory() instanceof CartographyInventory)) return;
-
-        ItemStack cursor = event.getCursor();
-        ItemStack current = event.getCurrentItem();
-
-        if (cursor != null && HookAPI.isGrapplingHook(cursor)) {
-            event.setCancelled(true);
-            sendBlockMessage((Player) event.getWhoClicked(), "cartography table");
-            return;
-        }
-
-        if (current != null && HookAPI.isGrapplingHook(current)) {
-            event.setCancelled(true);
-            sendBlockMessage((Player) event.getWhoClicked(), "cartography table");
-        }
+        handleInventoryClick(event, "cartography table");
     }
 
     /**
@@ -175,19 +108,28 @@ public class InventoryListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH)
     public void onLoomClick(InventoryClickEvent event) {
         if (!(event.getInventory() instanceof LoomInventory)) return;
-
+        handleInventoryClick(event, "loom");
+    }
+    
+    /**
+     * Helper method to handle inventory click events for blocking grappling hooks
+     * Reduces code duplication across multiple inventory event handlers
+     */
+    private void handleInventoryClick(InventoryClickEvent event, String inventoryType) {
         ItemStack cursor = event.getCursor();
         ItemStack current = event.getCurrentItem();
 
+        // Check if player is trying to place a grappling hook
         if (cursor != null && HookAPI.isGrapplingHook(cursor)) {
             event.setCancelled(true);
-            sendBlockMessage((Player) event.getWhoClicked(), "loom");
+            sendBlockMessage((Player) event.getWhoClicked(), inventoryType);
             return;
         }
 
+        // Check if there's already a grappling hook in the slot being clicked
         if (current != null && HookAPI.isGrapplingHook(current)) {
             event.setCancelled(true);
-            sendBlockMessage((Player) event.getWhoClicked(), "loom");
+            sendBlockMessage((Player) event.getWhoClicked(), inventoryType);
         }
     }
 
@@ -197,46 +139,43 @@ public class InventoryListener implements Listener {
      */
     @EventHandler(priority = EventPriority.HIGH)
     public void onPrepareAnvil(PrepareAnvilEvent event) {
-        ItemStack[] items = event.getInventory().getContents();
-        for (ItemStack item : items) {
-            if (item != null && HookAPI.isGrapplingHook(item)) {
-                event.setResult(null);
-                return;
-            }
+        if (containsGrapplingHook(event.getInventory().getContents())) {
+            event.setResult(null);
         }
     }
 
     @EventHandler(priority = EventPriority.HIGH)
     public void onPrepareItemCraft(PrepareItemCraftEvent event) {
-        ItemStack[] matrix = event.getInventory().getMatrix();
-        for (ItemStack item : matrix) {
-            if (item != null && HookAPI.isGrapplingHook(item)) {
-                event.getInventory().setResult(null);
-                return;
-            }
+        if (containsGrapplingHook(event.getInventory().getMatrix())) {
+            event.getInventory().setResult(null);
         }
     }
 
     @EventHandler(priority = EventPriority.HIGH)
     public void onPrepareSmithing(PrepareSmithingEvent event) {
-        ItemStack[] items = event.getInventory().getContents();
-        for (ItemStack item : items) {
-            if (item != null && HookAPI.isGrapplingHook(item)) {
-                event.setResult(null);
-                return;
-            }
+        if (containsGrapplingHook(event.getInventory().getContents())) {
+            event.setResult(null);
         }
     }
 
     @EventHandler(priority = EventPriority.HIGH)
     public void onPrepareGrindstone(PrepareGrindstoneEvent event) {
-        ItemStack[] items = event.getInventory().getContents();
+        if (containsGrapplingHook(event.getInventory().getContents())) {
+            event.setResult(null);
+        }
+    }
+    
+    /**
+     * Helper method to check if an array of items contains a grappling hook
+     * Reduces code duplication across prepare event handlers
+     */
+    private boolean containsGrapplingHook(ItemStack[] items) {
         for (ItemStack item : items) {
             if (item != null && HookAPI.isGrapplingHook(item)) {
-                event.setResult(null);
-                return;
+                return true;
             }
         }
+        return false;
     }
 
     /**
