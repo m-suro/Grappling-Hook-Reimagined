@@ -169,6 +169,11 @@ public class GrapplingHookType {
         GrapplingHook plugin = GrapplingHook.getPlugin();
         YamlConfiguration config = plugin.getHooksConfig();
 
+        // Check if the hook exists in config
+        if (!config.contains("hooks." + name)) {
+            throw new IllegalArgumentException("Hook type '" + name + "' does not exist in hooks.yml configuration");
+        }
+
         String usesPlaceholder = maxUses == -1 ? "∞" : String.valueOf(maxUses - uses);
 
         String itemName = config.getString("hooks." + name + ".item_display.name", name).replace("[uses]", usesPlaceholder);
