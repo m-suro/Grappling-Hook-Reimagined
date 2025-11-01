@@ -17,9 +17,6 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import org.bukkit.util.Vector;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import static org.bukkit.event.player.PlayerFishEvent.State.FISHING;
 
 @SuppressWarnings({"UnstableApiUsage", "deprecation"})

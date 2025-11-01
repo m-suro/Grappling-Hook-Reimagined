@@ -179,10 +179,8 @@ public final class HookAPI {
             meta.setDisplayName(GrapplingHook.getPlugin().formatMessage(itemName));
 
             List<String> itemLore = config.getStringList("hooks." + hookType.getName() + ".item_display.description");
-            itemLore = itemLore.stream()
-                    .map(line -> line.replace("[uses]", placeholder))
-                    .map(GrapplingHook.getPlugin()::formatMessage)
-                    .toList();
+            // Combine transformations into a single pass for better performance
+            itemLore.replaceAll(line -> GrapplingHook.getPlugin().formatMessage(line.replace("[uses]", placeholder)));
             meta.setLore(itemLore);
 
             is.setItemMeta(meta);

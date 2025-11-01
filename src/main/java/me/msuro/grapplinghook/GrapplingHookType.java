@@ -175,9 +175,9 @@ public class GrapplingHookType {
         String itemName = config.getString("hooks." + name + ".item_display.name", name).replace("[uses]", usesPlaceholder);
         List<String> itemLore = config.getStringList("hooks." + name + ".item_display.description");
         meta.setDisplayName(plugin.formatMessage(itemName));
-        itemLore.replaceAll(line -> plugin.formatMessage(line));
         if (!itemLore.isEmpty()) {
-            itemLore.replaceAll(line -> line.replace("[uses]", usesPlaceholder));
+            // Combine both transformations into a single pass for better performance
+            itemLore.replaceAll(line -> plugin.formatMessage(line.replace("[uses]", usesPlaceholder)));
             meta.setLore(itemLore);
         }
 
