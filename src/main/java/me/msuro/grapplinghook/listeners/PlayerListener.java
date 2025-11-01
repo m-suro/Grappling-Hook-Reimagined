@@ -330,6 +330,7 @@ public class PlayerListener implements Listener {
             private Location prev = hook.getLocation().clone();
             private ProjectileSource source = hook.getShooter();
             private Player player = (source instanceof Player) ? (Player) source : null;
+            boolean runStickyLogic = true;
 
             {
                 task = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
@@ -355,9 +356,11 @@ public class PlayerListener implements Listener {
                             return;
                         if (!hookType.getSlowFall())
                             return;
-                        if (hook.getLocation().getY() > player.getLocation().getY())
+                        if (hook.getLocation().getY() < player.getLocation().getY())
                             return;
-                        player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 1, 1, false, false));
+                        Bukkit.getScheduler().runTask(plugin, () -> {
+                            player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 20, 1, false, false));
+                        });
                         return;
                     }
 
@@ -368,7 +371,8 @@ public class PlayerListener implements Listener {
                             FluidCollisionMode.ALWAYS,
                             true
                     );
-
+                    if(!runStickyLogic)
+                        return;
                     if (r != null && r.getHitBlock() != null && !r.getHitBlock().getType().isAir()) {
                         //BlockFace face = r.getHitBlockFace();
                         Location hit = new Location(world.getWorld(), r.getHitPosition().getX(), r.getHitPosition().getY(), r.getHitPosition().getZ());
@@ -386,14 +390,14 @@ public class PlayerListener implements Listener {
                                 armorStand.setInvulnerable(true);
                             });
                             plugin.getArmorStandList().add(vehicle);
-                            task.cancel();
+                            runStickyLogic = false;
 
                             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                                 if (vehicle.isValid()) {
                                     plugin.getArmorStandList().remove(vehicle);
                                     vehicle.remove();
                                 }
-                            }, 100L); // 100 ticks
+                            }, 600L); // 100 ticks
                         }
                     } else if (hook.getVelocity().lengthSquared() < 0.01) {
                         // Check block at current and all neighbors
@@ -415,14 +419,14 @@ public class PlayerListener implements Listener {
                                         armorStand.setInvulnerable(true);
                                     });
                                     plugin.getArmorStandList().add(vehicle);
-                                    task.cancel();
+                                    runStickyLogic = false;
 
                                     Bukkit.getScheduler().runTaskLater(plugin, () -> {
                                         if (vehicle.isValid()) {
                                             vehicle.remove();
                                             plugin.getArmorStandList().remove(vehicle);
                                         }
-                                    }, 100L); // 100 ticks
+                                    }, 600L); // 100 ticks
                                 }
                                 break;
                             }
