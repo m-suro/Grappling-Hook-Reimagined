@@ -45,7 +45,7 @@ public class PlayerListener implements Listener {
         if(event.getState() != FISHING)
             event.setCancelled(true);
 
-        GrapplingHookType hookType = new GrapplingHookType(null).fromItemStack(itemInHand);
+        GrapplingHookType hookType = GrapplingHookType.fromItemStack(itemInHand);
 
 
         // Check if the player can use the hook
@@ -113,11 +113,9 @@ public class PlayerListener implements Listener {
                 boolean airCase = true;
                 double relativeX = Math.abs(event.getHook().getLocation().getX() % 1);
                 double relativeZ = Math.abs(event.getHook().getLocation().getZ() % 1);
-                Bukkit.broadcastMessage("relativeX: " + relativeX + ", relativeZ: " + relativeZ);
                 if(relativeX == 0.125 || relativeX == 0.875 ||
                         relativeZ == 0.125 || relativeZ == 0.875) {
                     block = getNearestBlockLocation(event.getHook().getLocation()).getBlock();
-                    Bukkit.broadcastMessage("Using nearest block: " + block.getType());
                     airCase = false;
                 } else {
                     block = event.getHook().getLocation().getBlock();
@@ -180,28 +178,29 @@ public class PlayerListener implements Listener {
      * @return The nearest solid block location or the original location if none found.
      */
     private Location getNearestBlockLocation(Location loc) {
-        List<Location> neighboringLocations = new ArrayList<>();
-
-        // Use the hook's actual location as the starting point
-        neighboringLocations.add(loc.clone().add(1, 0, 0));   // East
-        neighboringLocations.add(loc.clone().add(-1, 0, 0));  // West
-        neighboringLocations.add(loc.clone().add(0, 0, 1));   // South
-        neighboringLocations.add(loc.clone().add(0, 0, -1));  // North
-        neighboringLocations.add(loc.clone().add(0, 1, 0));   // Up
-        neighboringLocations.add(loc.clone().add(0, -1, 0));  // Down
-
         Location nearest = null;
         double nearestDistance = Double.MAX_VALUE;
 
-        for (Location locNeighbor : neighboringLocations) {
-            Block neighborBlock = locNeighbor.getBlock();
-            if (!neighborBlock.getType().isSolid()) {
+        // Check 6 neighboring blocks directly without creating a list
+        // This reduces memory allocation overhead
+        Location[] offsets = {
+            loc.clone().add(1, 0, 0),   // East
+            loc.clone().add(-1, 0, 0),  // West
+            loc.clone().add(0, 0, 1),   // South
+            loc.clone().add(0, 0, -1),  // North
+            loc.clone().add(0, 1, 0),   // Up
+            loc.clone().add(0, -1, 0)   // Down
+        };
+
+        for (Location candidate : offsets) {
+            Block block = candidate.getBlock();
+            if (!block.getType().isSolid()) {
                 continue;
             }
-            double distance = loc.distanceSquared(locNeighbor);
+            double distance = loc.distanceSquared(candidate);
             if (distance < nearestDistance) {
                 nearestDistance = distance;
-                nearest = locNeighbor;
+                nearest = candidate;
             }
         }
 
