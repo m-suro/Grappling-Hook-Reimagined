@@ -66,7 +66,7 @@ public class InventoryListener implements Listener {
 
     /**
      * Blocks grappling hooks from being used in crafting (both 2x2 and 3x3)
-     * Prevents: combining with other items in recipes
+     * Prevents: combining with other items
      */
     @EventHandler(priority = EventPriority.HIGH)
     public void onCraftingClick(InventoryClickEvent event) {

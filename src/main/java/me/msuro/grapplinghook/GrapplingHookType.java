@@ -1,11 +1,13 @@
 package me.msuro.grapplinghook;
 
+import io.papermc.paper.datacomponent.item.CustomModelData;
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.components.CustomModelDataComponent;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.Vector;
@@ -25,6 +27,7 @@ public class GrapplingHookType {
     @Getter @Setter private Integer uses;
     @Getter @Setter private Integer id; // Unique ID for the hook type
     @Getter @Setter private Integer cooldown; // Cooldown in seconds
+    @Getter @Setter private Integer customModelData;
     @Getter @Setter private ItemStack itemStack;
 
     @Getter @Setter private Vector velocityThrowMultiplier; // Velocity when thrown
@@ -65,6 +68,7 @@ public class GrapplingHookType {
         fillMissingDataFromConfig();
 
         itemStack.setItemMeta(getReadyMeta());
+
         return this;
     }
 
@@ -95,7 +99,8 @@ public class GrapplingHookType {
         this.lineBreak = config.getBoolean(path + "special_features.break_on_disconnect", false);
         this.stickyHook = config.getBoolean(path + "special_features.sticky_landing", false);
 
-        path = "hooks." + name + ".";
+        this.customModelData = config.getInt("hooks." + name + "item_display.texture_id", 0);
+
 
         if (blocksMode == null)
             blocksMode = config.getString(path + "allowed_blocks.mode", "ALLOW_ONLY");
@@ -166,7 +171,6 @@ public class GrapplingHookType {
         if (meta == null) {
             throw new IllegalStateException("ItemMeta is null. Ensure the ItemStack is valid.");
         }
-
         GrapplingHook plugin = GrapplingHook.getPlugin();
         YamlConfiguration config = plugin.getHooksConfig();
 
@@ -174,6 +178,8 @@ public class GrapplingHookType {
         if (!config.contains("hooks." + name)) {
             throw new IllegalArgumentException("Hook type '" + name + "' does not exist in hooks.yml configuration");
         }
+
+        meta.setCustomModelData(customModelData);
 
         String usesPlaceholder = maxUses == -1 ? "∞" : String.valueOf(maxUses - uses);
 

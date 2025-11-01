@@ -14,11 +14,16 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
+import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
+import org.bukkit.projectiles.ProjectileSource;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
@@ -111,6 +116,8 @@ public class PlayerListener implements Listener {
 
                 HookAPI.setUses(player, itemInHand, hookType.getUses() + 1);
 
+                addFallDamagePreventionPDC(player, hookType);
+
                 if (plugin.isServerVersionAtLeast1_21_2())
                     CooldownSystem.startCooldown(player, itemInHand, hookType.getCooldown());
 
@@ -146,6 +153,8 @@ public class PlayerListener implements Listener {
                 }
 
                 HookAPI.setUses(player, itemInHand, hookType.getUses() + 1);
+
+                addFallDamagePreventionPDC(player, hookType);
 
                 if (plugin.isServerVersionAtLeast1_21_2())
                     CooldownSystem.startCooldown(player, itemInHand, hookType.getCooldown());
@@ -280,6 +289,7 @@ public class PlayerListener implements Listener {
             v2.add(pull);
             player.setVelocity(v2);
         }, 2L);
+
     }
 
     private static double getY(PlayerFishEvent event, Player player) {
@@ -318,6 +328,8 @@ public class PlayerListener implements Listener {
         new Object() {
             private BukkitTask task;
             private Location prev = hook.getLocation().clone();
+            private ProjectileSource source = hook.getShooter();
+            private Player player = (source instanceof Player) ? (Player) source : null;
 
             {
                 task = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
@@ -332,12 +344,20 @@ public class PlayerListener implements Listener {
                         return;
                     }
 
+
                     Location curr = hook.getLocation();
                     Vector delta = curr.toVector().subtract(prev.toVector());
                     double dist = delta.length();
 
                     if (dist < 1e-4) {
                         prev = curr.clone();
+                        if(player == null)
+                            return;
+                        if (!hookType.getSlowFall())
+                            return;
+                        if (hook.getLocation().getY() < player.getLocation().getY())
+                            return;
+                        player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 1, 1, false, false));
                         return;
                     }
 
@@ -413,6 +433,57 @@ public class PlayerListener implements Listener {
                 }, 2L, 1L);
             }
         };
+    }
+
+    private void addFallDamagePreventionPDC(Player player, GrapplingHookType hookType) {
+        if(hookType.getFallDamage())
+            return;
+        PersistentDataContainer pdc = player.getPersistentDataContainer();
+        NamespacedKey usedHook = new NamespacedKey(plugin, "used_hook");
+        NamespacedKey timeUsed = new NamespacedKey(plugin, "time_used_hook");
+        NamespacedKey yLevelOnUse = new NamespacedKey(plugin, "y_level_on_use_hook");
+        pdc.set(usedHook, PersistentDataType.INTEGER, hookType.getId());
+        pdc.set(timeUsed, PersistentDataType.LONG, System.currentTimeMillis());
+        pdc.set(yLevelOnUse, PersistentDataType.DOUBLE, player.getLocation().getY());
+    }
+
+    @EventHandler
+    public void onEntityDamageEvent(EntityDamageEvent event) {
+        if (!(event.getEntity() instanceof Player))
+            return;
+
+        Player player = (Player) event.getEntity();
+        if (event.getCause() != EntityDamageEvent.DamageCause.FALL)
+            return;
+
+        PersistentDataContainer pdc = player.getPersistentDataContainer();
+        NamespacedKey usedHookPDC = new NamespacedKey(plugin, "used_hook");
+        NamespacedKey timeUsedPDC = new NamespacedKey(plugin, "time_used_hook");
+        NamespacedKey yLevelOnUsePDC = new NamespacedKey(plugin, "y_level_on_use_hook");
+
+        if (!pdc.has(usedHookPDC, PersistentDataType.INTEGER)
+                || !pdc.has(timeUsedPDC, PersistentDataType.LONG)
+                || !pdc.has(yLevelOnUsePDC, PersistentDataType.DOUBLE))
+            return;
+
+        int hookId = pdc.get(usedHookPDC, PersistentDataType.INTEGER);
+        long timeUsedMillis = pdc.get(timeUsedPDC, PersistentDataType.LONG);
+        double yLevelOnUse = pdc.get(yLevelOnUsePDC, PersistentDataType.DOUBLE);
+
+        if(System.currentTimeMillis()-timeUsedMillis > 5000L)
+            return;
+
+        double currentY = player.getLocation().getY();
+        if (currentY >= yLevelOnUse-3) {
+            // Player is above the Y level when the hook was used - prevent fall damage
+            // Subtract 3 for safety margin to account for slight variations in landing position
+            event.setCancelled(true);
+        } else {
+            // Player is below the Y level when the hook was used - allow fall damage and remove PDC entries
+            pdc.remove(usedHookPDC);
+            pdc.remove(timeUsedPDC);
+            pdc.remove(yLevelOnUsePDC);
+        }
     }
 
 }
