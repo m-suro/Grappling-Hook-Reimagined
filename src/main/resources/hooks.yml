@@ -28,7 +28,6 @@ hooks:
       special_features:
         prevent_fall_damage: false     # Player takes no fall damage when using this hook
         slow_falling: false            # Player falls slowly while hook is active (And above the player)
-        break_on_disconnect: false     # Hook breaks if line of sight is lost
         sticky_landing: false          # Hook sticks to surfaces longer
 
     # Item Appearance
@@ -67,7 +66,6 @@ hooks:
       special_features:
         prevent_fall_damage: false
         slow_falling: true
-        break_on_disconnect: true
         sticky_landing: true
 
     item_display:

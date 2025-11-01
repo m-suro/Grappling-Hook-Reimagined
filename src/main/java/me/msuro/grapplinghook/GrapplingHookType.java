@@ -99,7 +99,7 @@ public class GrapplingHookType {
         this.lineBreak = config.getBoolean(path + "special_features.break_on_disconnect", false);
         this.stickyHook = config.getBoolean(path + "special_features.sticky_landing", false);
 
-        this.customModelData = config.getInt("hooks." + name + "item_display.texture_id", 0);
+        this.customModelData = config.getInt("hooks." + name + ".item_display.texture_id", 0);
 
 
         if (blocksMode == null)
@@ -238,7 +238,7 @@ public class GrapplingHookType {
             stickyHook = config.getBoolean(path + "special_features.sticky_landing", false);
 
         if (customModelData == null)
-            customModelData = config.getInt("hooks." + name + "item_display.texture_id", 0);
+            customModelData = config.getInt("hooks." + name + ".item_display.texture_id", 0);
 
         path = "hooks." + name + ".";
 

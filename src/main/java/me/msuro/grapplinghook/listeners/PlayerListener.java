@@ -355,7 +355,7 @@ public class PlayerListener implements Listener {
                             return;
                         if (!hookType.getSlowFall())
                             return;
-                        if (hook.getLocation().getY() < player.getLocation().getY())
+                        if (hook.getLocation().getY() > player.getLocation().getY())
                             return;
                         player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 1, 1, false, false));
                         return;
