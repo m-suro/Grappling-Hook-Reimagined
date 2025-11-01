@@ -116,7 +116,7 @@ public class PlayerListener implements Listener {
 
                 HookAPI.setUses(player, itemInHand, hookType.getUses() + 1);
 
-                addFallDamagePreventionPDC(player, hookType);
+                addFallDamagePreventionPDC(player);
 
                 if (plugin.isServerVersionAtLeast1_21_2())
                     CooldownSystem.startCooldown(player, itemInHand, hookType.getCooldown());
@@ -154,7 +154,7 @@ public class PlayerListener implements Listener {
 
                 HookAPI.setUses(player, itemInHand, hookType.getUses() + 1);
 
-                addFallDamagePreventionPDC(player, hookType);
+                addFallDamagePreventionPDC(player);
 
                 if (plugin.isServerVersionAtLeast1_21_2())
                     CooldownSystem.startCooldown(player, itemInHand, hookType.getCooldown());
@@ -435,14 +435,12 @@ public class PlayerListener implements Listener {
         };
     }
 
-    private void addFallDamagePreventionPDC(Player player, GrapplingHookType hookType) {
+    private void addFallDamagePreventionPDC(Player player) {
         if(hookType.getFallDamage())
             return;
         PersistentDataContainer pdc = player.getPersistentDataContainer();
-        NamespacedKey usedHook = new NamespacedKey(plugin, "used_hook");
         NamespacedKey timeUsed = new NamespacedKey(plugin, "time_used_hook");
         NamespacedKey yLevelOnUse = new NamespacedKey(plugin, "y_level_on_use_hook");
-        pdc.set(usedHook, PersistentDataType.INTEGER, hookType.getId());
         pdc.set(timeUsed, PersistentDataType.LONG, System.currentTimeMillis());
         pdc.set(yLevelOnUse, PersistentDataType.DOUBLE, player.getLocation().getY());
     }
@@ -457,16 +455,13 @@ public class PlayerListener implements Listener {
             return;
 
         PersistentDataContainer pdc = player.getPersistentDataContainer();
-        NamespacedKey usedHookPDC = new NamespacedKey(plugin, "used_hook");
         NamespacedKey timeUsedPDC = new NamespacedKey(plugin, "time_used_hook");
         NamespacedKey yLevelOnUsePDC = new NamespacedKey(plugin, "y_level_on_use_hook");
 
-        if (!pdc.has(usedHookPDC, PersistentDataType.INTEGER)
-                || !pdc.has(timeUsedPDC, PersistentDataType.LONG)
+        if (!pdc.has(timeUsedPDC, PersistentDataType.LONG)
                 || !pdc.has(yLevelOnUsePDC, PersistentDataType.DOUBLE))
             return;
 
-        int hookId = pdc.get(usedHookPDC, PersistentDataType.INTEGER);
         long timeUsedMillis = pdc.get(timeUsedPDC, PersistentDataType.LONG);
         double yLevelOnUse = pdc.get(yLevelOnUsePDC, PersistentDataType.DOUBLE);
 
@@ -480,7 +475,6 @@ public class PlayerListener implements Listener {
             event.setCancelled(true);
         } else {
             // Player is below the Y level when the hook was used - allow fall damage and remove PDC entries
-            pdc.remove(usedHookPDC);
             pdc.remove(timeUsedPDC);
             pdc.remove(yLevelOnUsePDC);
         }
