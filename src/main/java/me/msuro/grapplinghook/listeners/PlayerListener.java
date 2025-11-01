@@ -116,7 +116,7 @@ public class PlayerListener implements Listener {
 
                 HookAPI.setUses(player, itemInHand, hookType.getUses() + 1);
 
-                addFallDamagePreventionPDC(player);
+                addFallDamagePreventionPDC(player, hookType);
 
                 if (plugin.isServerVersionAtLeast1_21_2())
                     CooldownSystem.startCooldown(player, itemInHand, hookType.getCooldown());
@@ -154,7 +154,7 @@ public class PlayerListener implements Listener {
 
                 HookAPI.setUses(player, itemInHand, hookType.getUses() + 1);
 
-                addFallDamagePreventionPDC(player);
+                addFallDamagePreventionPDC(player, hookType);
 
                 if (plugin.isServerVersionAtLeast1_21_2())
                     CooldownSystem.startCooldown(player, itemInHand, hookType.getCooldown());
@@ -435,7 +435,7 @@ public class PlayerListener implements Listener {
         };
     }
 
-    private void addFallDamagePreventionPDC(Player player) {
+    private void addFallDamagePreventionPDC(Player player, GrapplingHookType hookType) {
         if(hookType.getFallDamage())
             return;
         PersistentDataContainer pdc = player.getPersistentDataContainer();

@@ -237,6 +237,9 @@ public class GrapplingHookType {
         if (stickyHook == null)
             stickyHook = config.getBoolean(path + "special_features.sticky_landing", false);
 
+        if (customModelData == null)
+            customModelData = config.getInt("hooks." + name + "item_display.texture_id", 0);
+
         path = "hooks." + name + ".";
 
         if (blocksMode == null)
@@ -258,6 +261,7 @@ public class GrapplingHookType {
                 ", uses=" + uses +
                 ", id=" + id +
                 ", cooldown=" + cooldown +
+                ", customModelData=" + customModelData +
                 ", velocityThrowMultiplier=" + velocityThrowMultiplier +
                 ", velocityPullMultiplier=" + velocityPullMultiplier +
                 ", fallDamage=" + fallDamage +
