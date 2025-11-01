@@ -32,18 +32,17 @@ public final class HookAPI {
 		return false;
 	}
 
-    public static boolean canHookOntoBlock(GrapplingHookType hookType, Block block) {
+    public static boolean canHookOntoBlock(GrapplingHookType hookType, String block) {
         String blocksMode = hookType.getBlocksMode();
         List<String> blocksList = hookType.getBlocksList();
-        String blockTypeName = block.getType().name();
 
-        //Bukkit.broadcastMessage("Checking if hook `" + hookType.getId() + "` can hook onto block: " + blockTypeName + " [List mode = " + blocksMode + "]");
+        //Bukkit.broadcastMessage("Checking if hook `" + hookType.getId() + "` can hook onto block: " + block + " [List mode = " + blocksMode + "]");
         //Bukkit.broadcastMessage("Blocks list: " + blocksList);
 
-        // Use case-insensitive check with Set for better performance
+        // Use case-insensitive check with simple loop for better performance
         boolean blockInList = false;
         for (String blockType : blocksList) {
-            if (blockType.equalsIgnoreCase(blockTypeName)) {
+            if (blockType.equalsIgnoreCase(block)) {
                 blockInList = true;
                 break;
             }

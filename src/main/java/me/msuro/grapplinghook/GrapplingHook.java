@@ -1,6 +1,7 @@
 package me.msuro.grapplinghook;
 
 import lombok.Getter;
+import lombok.Setter;
 import me.msuro.grapplinghook.listeners.InventoryListener;
 import me.msuro.grapplinghook.listeners.PlayerListener;
 import me.msuro.grapplinghook.utils.CooldownSystem;
@@ -10,6 +11,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.command.CommandMap;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Entity;
 import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -17,6 +19,7 @@ import java.io.*;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -38,6 +41,10 @@ public class GrapplingHook extends JavaPlugin{
     private YamlConfiguration hooksConfig;
     @Getter
     private YamlConfiguration config;
+
+    @Getter @Setter
+    private List<Entity> armorStandList = new ArrayList<>();
+
 
     Metrics metrics;
 
@@ -98,6 +105,12 @@ public class GrapplingHook extends JavaPlugin{
                 commandMap.getKnownCommands().remove(commandHandler.getName());
             } catch (NoSuchFieldException | IllegalAccessException e) {
                 getLogger().severe("Failed to unregister command handler: " + e.getMessage());
+            }
+        }
+
+        for(Entity entity : armorStandList) {
+            if (entity != null && !entity.isDead()) {
+                entity.remove();
             }
         }
 

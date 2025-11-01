@@ -4,9 +4,12 @@ import me.msuro.grapplinghook.GrapplingHook;
 import me.msuro.grapplinghook.GrapplingHookType;
 import me.msuro.grapplinghook.api.HookAPI;
 import me.msuro.grapplinghook.utils.CooldownSystem;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
+import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
+import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.FishHook;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -15,6 +18,9 @@ import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
+import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
 import static org.bukkit.event.player.PlayerFishEvent.State.FISHING;
@@ -39,7 +45,7 @@ public class PlayerListener implements Listener {
         // Item is a grappling hook, so we don't care about any vanilla mechanics
         // as long as they are not throwing the hook, we cancel the event
         // Since we are canceling the event, we have to remove the hook entity manually later
-        if(event.getState() != FISHING)
+        if (event.getState() != FISHING)
             event.setCancelled(true);
 
         GrapplingHookType hookType = GrapplingHookType.fromItemStack(itemInHand);
@@ -64,13 +70,22 @@ public class PlayerListener implements Listener {
             return;
         }
 
-        //Bukkit.broadcastMessage(event.getState().name());
+        Entity hookVehicle = event.getHook().getVehicle();
+        if (hookVehicle != null) {
+            // Hook is already attached to an entity - kill the vehicle to not leave invisble, immortal armor stands around
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (hookVehicle.isValid()) {
+                    hookVehicle.remove();
+                    plugin.getArmorStandList().remove(hookVehicle); // Remove the armor stand from the list if it is still there
+                }
+            }, 1L);
+        }
 
         switch (event.getState()) {
             case FISHING: // Throwing the hook
                 handleThrownHook(event, player, hookType);
 
-                if(plugin.isServerVersionAtLeast1_21_2()) {
+                if (plugin.isServerVersionAtLeast1_21_2()) {
                     // Clear the default cooldown (~1 second) for the grappling hook item. It gets created every time in CooldownSystem.startCooldown() by Minecraft
                     // So far there is no way to not create it, but we can clear it right after the hook is thrown. It causes a small visual glitch, but it is better than having a cooldown.
                     ItemMeta meta = itemInHand.getItemMeta();
@@ -78,18 +93,23 @@ public class PlayerListener implements Listener {
                     itemInHand.setItemMeta(meta);
                 }
 
+                runTrackingRunnable(event.getHook(), player.getLocation(), hookType);
+
                 break;
             case IN_GROUND: // Pulling the hook back from ground
             case FAILED_ATTEMPT: // Pulling the hook back from water after failing to catch a fish
-                Block nearestBlock = getNearestBlockLocation(event.getHook().getLocation()).getBlock();
-                if (!HookAPI.canHookOntoBlock(hookType, nearestBlock)) {
+                double y = event.getHook().getLocation().getY();
+                Location loc = event.getHook().getLocation().clone();
+                loc.setY(y - 0.125); // Set the location to the block below the hook's location
+                Block nearestBlock = loc.getBlock(); // Get the block below the hook's location
+                if (!HookAPI.canHookOntoBlock(hookType, nearestBlock.getType().name())) {
                     event.getHook().remove();
                     return; // If the hook cannot hook onto the block, do nothing
                 }
 
                 handleBlockHook(event, player, hookType);
 
-                HookAPI.setUses(player, itemInHand, hookType.getUses()+1);
+                HookAPI.setUses(player, itemInHand, hookType.getUses() + 1);
 
                 if (plugin.isServerVersionAtLeast1_21_2())
                     CooldownSystem.startCooldown(player, itemInHand, hookType.getCooldown());
@@ -105,19 +125,15 @@ public class PlayerListener implements Listener {
                  * - If the hook's location is not near a block boundary,
                  *   use the block at the hook's location, calling it "air case".
                  */
-                Block block;
                 // By default, assume the hook is in the air - this is the most common case when this state gets called.
-                boolean airCase = true;
-                double relativeX = Math.abs(event.getHook().getLocation().getX() % 1);
-                double relativeZ = Math.abs(event.getHook().getLocation().getZ() % 1);
-                if(relativeX == 0.125 || relativeX == 0.875 ||
-                        relativeZ == 0.125 || relativeZ == 0.875) {
-                    block = getNearestBlockLocation(event.getHook().getLocation()).getBlock();
-                    airCase = false;
-                } else {
-                    block = event.getHook().getLocation().getBlock();
+                NamespacedKey raytracedKey = new NamespacedKey(plugin, "raytraced_" + hookType.getId());
+                String raytracedBlockType = event.getHook().getPersistentDataContainer().get(raytracedKey, PersistentDataType.STRING);
+                boolean airCase = raytracedBlockType == null || raytracedBlockType.equals("AIR");
+                if (raytracedBlockType == null) {
+                    // If the raytraced block type is null, it means the hook is in the air
+                    raytracedBlockType = "AIR"; // Set it to AIR to avoid NPE
                 }
-                if (!HookAPI.canHookOntoBlock(hookType, block)) {
+                if (!HookAPI.canHookOntoBlock(hookType, raytracedBlockType)) {
                     event.getHook().remove();
                     return; // If the hook cannot hook onto the block, do nothing
                 }
@@ -129,7 +145,7 @@ public class PlayerListener implements Listener {
                     handleBlockHook(event, player, hookType);
                 }
 
-                HookAPI.setUses(player, itemInHand, hookType.getUses()+1);
+                HookAPI.setUses(player, itemInHand, hookType.getUses() + 1);
 
                 if (plugin.isServerVersionAtLeast1_21_2())
                     CooldownSystem.startCooldown(player, itemInHand, hookType.getCooldown());
@@ -139,21 +155,21 @@ public class PlayerListener implements Listener {
                 break;
             case CAUGHT_FISH: // Pulling the hook back from water after catching a fish
                 event.getHook().remove();
-                if(event.getCaught() != null) {
+                if (event.getCaught() != null) {
                     event.getCaught().remove(); // Remove the caught fish entity
                     event.setExpToDrop(0); // No experience drop
                 }
                 break;
             case CAUGHT_ENTITY:
-                if(event.getHook().getHookedEntity() != null) {
+                if (event.getHook().getHookedEntity() != null) {
 
-                    if(!HookAPI.canHookOntoEntity(hookType, event.getHook().getHookedEntity().getType())) {
+                    if (!HookAPI.canHookOntoEntity(hookType, event.getHook().getHookedEntity().getType())) {
                         event.getHook().remove(); // If the hook cannot pull the entity, remove the hook entity
                         return;
                     }
 
                     handleEntityPull(event, player, hookType);
-                    HookAPI.setUses(player, itemInHand, hookType.getUses()+1);
+                    HookAPI.setUses(player, itemInHand, hookType.getUses() + 1);
                     if (plugin.isServerVersionAtLeast1_21_2())
                         CooldownSystem.startCooldown(player, itemInHand, hookType.getCooldown());
                     event.getHook().remove(); // Remove the hook entity after pulling it back
@@ -162,46 +178,6 @@ public class PlayerListener implements Listener {
             default:
                 break;
         }
-    }
-
-
-    /**
-     * Finds the nearest solid block location around the given location.
-     * If no solid blocks are found, returns the original location.
-     * Use 6 neighboring locations to check for solid blocks
-     * Could have used all 3x3x3 blocks around the location, but that would be too many checks and could cause performance issues.
-     *
-     * @param loc The location to check for nearby solid blocks.
-     * @return The nearest solid block location or the original location if none found.
-     */
-    private Location getNearestBlockLocation(Location loc) {
-        Location nearest = null;
-        double nearestDistance = Double.MAX_VALUE;
-
-        // Check 6 neighboring blocks directly without creating a list
-        // This reduces memory allocation overhead
-        Location[] offsets = {
-            loc.clone().add(1, 0, 0),   // East
-            loc.clone().add(-1, 0, 0),  // West
-            loc.clone().add(0, 0, 1),   // South
-            loc.clone().add(0, 0, -1),  // North
-            loc.clone().add(0, 1, 0),   // Up
-            loc.clone().add(0, -1, 0)   // Down
-        };
-
-        for (Location candidate : offsets) {
-            Block block = candidate.getBlock();
-            if (!block.getType().isSolid()) {
-                continue;
-            }
-            double distance = loc.distanceSquared(candidate);
-            if (distance < nearestDistance) {
-                nearestDistance = distance;
-                nearest = candidate;
-            }
-        }
-
-        return nearest != null ? nearest : loc;
     }
 
     /**
@@ -276,13 +252,7 @@ public class PlayerListener implements Listener {
         ItemStack itemInHand = player.getInventory().getItemInMainHand();
         if (!HookAPI.isGrapplingHook(itemInHand)) return;
 
-        Block target = getNearestBlockLocation(event.getHook().getLocation()).getBlock();
-        if (!HookAPI.canHookOntoBlock(hookType, target)) return;
-
-        // Convert pitch to factor: straight ahead = 0° , straight up/down = +/- 90°
-        double pitchDifference = 90 - Math.abs(player.getLocation().getPitch());
-        // Based on how high the player is looking, adjust the Y velocity
-        double y = -0.006 * pitchDifference + 1;
+        double y = getY(event, player);
 
         // Tick 0: small vertical lift so the player unsticks from ground
         Bukkit.getScheduler().runTask(plugin, () -> {
@@ -293,8 +263,7 @@ public class PlayerListener implements Listener {
         // Tick 1: nerf horizontal speed player and inject controlled Y
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             Vector v1 = player.getVelocity().clone();
-            v1.multiply(new Vector(0.3, 1, 0.3));
-            v1.setY(y);
+            v1.multiply(new Vector(0.3, 0.3, 0.3));
             player.setVelocity(v1);
         }, 1L);
 
@@ -303,6 +272,7 @@ public class PlayerListener implements Listener {
             Vector pull = event.getHook().getLocation().toVector()
                     .subtract(player.getLocation().toVector())
                     .normalize()
+                    .setY(y)
                     .multiply(hookType.getVelocityPullMultiplier());
 
             // preserve current Y (already set) and add pull mostly to XZ
@@ -310,6 +280,19 @@ public class PlayerListener implements Listener {
             v2.add(pull);
             player.setVelocity(v2);
         }, 2L);
+    }
+
+    private static double getY(PlayerFishEvent event, Player player) {
+        Location hookLocation = event.getHook().getLocation();
+        double g = -0.08; // Gravity (Minecraft)
+        double d = hookLocation.distance(player.getLocation()); // 3D distance
+        double t = d;
+        double minBoost = 0.5; // Example: adjust as needed (e.g., 0.1 to 0.2)
+        double y = ((1.0 + t)
+                * (hookLocation.getY() - player.getLocation().getY()) / t
+                - g * t) / 25;
+        y = y > 0 ? y + minBoost : y - minBoost;
+        return y;
     }
 
     private void handleEntityPull(PlayerFishEvent event, Player player, GrapplingHookType hookType) {
@@ -329,6 +312,107 @@ public class PlayerListener implements Listener {
         Vector v2 = event.getHook().getHookedEntity().getVelocity().clone();
         v2.add(pull);
         event.getHook().getHookedEntity().setVelocity(v2);
+    }
+
+    private void runTrackingRunnable(FishHook hook, Location world, GrapplingHookType hookType) {
+        new Object() {
+            private BukkitTask task;
+            private Location prev = hook.getLocation().clone();
+
+            {
+                task = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+                    if (!hook.isValid() || !hook.getWorld().equals(world.getWorld())) { // If the hook is not valid or the world has changed, cancel the task
+                        task.cancel();
+                        return;
+                    }
+
+                    if (!hookType.getStickyHook() && !hookType.getSlowFall()) {
+                        // If the hook is not sticky and does not have slow fall, we don't need to track it
+                        task.cancel();
+                        return;
+                    }
+
+                    Location curr = hook.getLocation();
+                    Vector delta = curr.toVector().subtract(prev.toVector());
+                    double dist = delta.length();
+
+                    if (dist < 1e-4) {
+                        prev = curr.clone();
+                        return;
+                    }
+
+                    RayTraceResult r = world.getWorld().rayTraceBlocks(
+                            prev,
+                            delta.normalize(),
+                            dist + 0.1,
+                            FluidCollisionMode.ALWAYS,
+                            true
+                    );
+
+                    if (r != null && r.getHitBlock() != null && !r.getHitBlock().getType().isAir()) {
+                        //BlockFace face = r.getHitBlockFace();
+                        Location hit = new Location(world.getWorld(), r.getHitPosition().getX(), r.getHitPosition().getY(), r.getHitPosition().getZ());
+                        NamespacedKey raytracedKey = new NamespacedKey(plugin, "raytraced_" + hookType.getId());
+                        hook.getPersistentDataContainer().set(raytracedKey, PersistentDataType.STRING, r.getHitBlock().getType().name());
+                        if(hookType.getStickyHook()) {
+                            // Spawn an invisible armor stand at the hit location so the hook can be attached to it
+                            ArmorStand vehicle = world.getWorld().spawn(hit, org.bukkit.entity.ArmorStand.class, armorStand -> {
+                                armorStand.setVisible(false);
+                                armorStand.setGravity(false);
+                                armorStand.setBasePlate(false);
+                                armorStand.setMarker(true);
+                                armorStand.setCustomNameVisible(false);
+                                armorStand.addPassenger(hook);
+                                armorStand.setInvulnerable(true);
+                            });
+                            plugin.getArmorStandList().add(vehicle);
+                            task.cancel();
+
+                            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                                if (vehicle.isValid()) {
+                                    plugin.getArmorStandList().remove(vehicle);
+                                    vehicle.remove();
+                                }
+                            }, 100L); // 100 ticks
+                        }
+                    } else if (hook.getVelocity().lengthSquared() < 0.01) {
+                        // Check block at current and all neighbors
+                        curr = hook.getLocation();
+                        for (BlockFace face : BlockFace.values()) {
+                            Block neighbor = curr.getBlock().getRelative(face);
+                            if (neighbor.getType().isSolid()) {
+                                NamespacedKey raytracedKey = new NamespacedKey(plugin, "raytraced_" + hookType.getId());
+                                hook.getPersistentDataContainer().set(raytracedKey, PersistentDataType.STRING, neighbor.getType().name());
+                                if(hookType.getStickyHook()) {
+                                    // Spawn an invisible armor stand at the hit location so the hook can be attached to it
+                                    ArmorStand vehicle = world.getWorld().spawn(hook.getLocation(), org.bukkit.entity.ArmorStand.class, armorStand -> {
+                                        armorStand.setVisible(false);
+                                        armorStand.setGravity(false);
+                                        armorStand.setBasePlate(false);
+                                        armorStand.setMarker(true);
+                                        armorStand.setCustomNameVisible(false);
+                                        armorStand.addPassenger(hook);
+                                        armorStand.setInvulnerable(true);
+                                    });
+                                    plugin.getArmorStandList().add(vehicle);
+                                    task.cancel();
+
+                                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                                        if (vehicle.isValid()) {
+                                            vehicle.remove();
+                                            plugin.getArmorStandList().remove(vehicle);
+                                        }
+                                    }, 100L); // 100 ticks
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    prev = curr.clone();
+
+                }, 2L, 1L);
+            }
+        };
     }
 
 }
