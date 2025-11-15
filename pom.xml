@@ -6,7 +6,7 @@
 
     <groupId>me.msuro.grapplinghook</groupId>
     <artifactId>GrapplingHook</artifactId>
-    <version>1.0-BETA</version>
+    <version>1.1-BETA</version>
 
     <properties>
         <maven.compiler.source>16</maven.compiler.source>

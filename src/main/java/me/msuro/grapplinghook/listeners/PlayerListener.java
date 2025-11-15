@@ -64,12 +64,12 @@ public class PlayerListener implements Listener {
             event.getHook().remove(); // Remove the hook entity if the player cannot use the hook
             switch (canUseParts[0]) {
                 case "USE_LIMIT_REACHED":
-                    player.sendActionBar(GrapplingHook.getPlugin().formatMessage(plugin.getConfig().getString("messages.use-limit-reached"))
+                    plugin.sendFormattedActionBar(player, plugin.getConfig().getString("messages.use-limit-reached")
                             .replace("[maxuses]", String.valueOf(hookType.getMaxUses())));
                     break;
                 case "COOLDOWN_ACTIVE":
                     // Hardcoded message because afaik there is no way to actually reach it - the cooldown is handled directly by minecraft
-                    player.sendActionBar(GrapplingHook.getPlugin().formatMessage("&8[&b\uD83C\uDFA3&8]&7 You cannot use this hook yet! Cooldown active for " + canUseParts[1] + " seconds."));
+                    plugin.sendFormattedActionBar(player, "&8[&b\uD83C\uDFA3&8]&7 You cannot use this hook yet! Cooldown active for " + canUseParts[1] + " seconds.");
                     break;
             }
             return;
@@ -306,7 +306,8 @@ public class PlayerListener implements Listener {
     }
 
     private void handleEntityPull(PlayerFishEvent event, Player player, GrapplingHookType hookType) {
-        if (event.getHook().getHookedEntity() == null) return; // If the hook is not hooked onto an entity, do nothing
+        if (event.getHook().getHookedEntity() == null || event.getHook().getHookedEntity().getEntityId() == player.getEntityId())
+            return; // If the hook is not hooked onto an entity, do nothing
 
         ItemStack itemInHand = player.getInventory().getItemInMainHand();
         if (!HookAPI.isGrapplingHook(itemInHand)) return;
@@ -352,7 +353,7 @@ public class PlayerListener implements Listener {
 
                     if (dist < 1e-4) {
                         prev = curr.clone();
-                        if(player == null)
+                        if (player == null)
                             return;
                         if (!hookType.getSlowFall())
                             return;
@@ -371,14 +372,14 @@ public class PlayerListener implements Listener {
                             FluidCollisionMode.ALWAYS,
                             true
                     );
-                    if(!runStickyLogic)
+                    if (!runStickyLogic)
                         return;
                     if (r != null && r.getHitBlock() != null && !r.getHitBlock().getType().isAir()) {
                         //BlockFace face = r.getHitBlockFace();
                         Location hit = new Location(world.getWorld(), r.getHitPosition().getX(), r.getHitPosition().getY(), r.getHitPosition().getZ());
                         NamespacedKey raytracedKey = new NamespacedKey(plugin, "raytraced_" + hookType.getId());
                         hook.getPersistentDataContainer().set(raytracedKey, PersistentDataType.STRING, r.getHitBlock().getType().name());
-                        if(hookType.getStickyHook()) {
+                        if (hookType.getStickyHook()) {
                             // Spawn an invisible armor stand at the hit location so the hook can be attached to it
                             ArmorStand vehicle = world.getWorld().spawn(hit, org.bukkit.entity.ArmorStand.class, armorStand -> {
                                 armorStand.setVisible(false);
@@ -407,7 +408,7 @@ public class PlayerListener implements Listener {
                             if (neighbor.getType().isSolid()) {
                                 NamespacedKey raytracedKey = new NamespacedKey(plugin, "raytraced_" + hookType.getId());
                                 hook.getPersistentDataContainer().set(raytracedKey, PersistentDataType.STRING, neighbor.getType().name());
-                                if(hookType.getStickyHook()) {
+                                if (hookType.getStickyHook()) {
                                     // Spawn an invisible armor stand at the hit location so the hook can be attached to it
                                     ArmorStand vehicle = world.getWorld().spawn(hook.getLocation(), org.bukkit.entity.ArmorStand.class, armorStand -> {
                                         armorStand.setVisible(false);
@@ -440,13 +441,15 @@ public class PlayerListener implements Listener {
     }
 
     private void addFallDamagePreventionPDC(Player player, GrapplingHookType hookType) {
-        if(hookType.getFallDamage())
+        if (hookType.getFallDamage())
             return;
         PersistentDataContainer pdc = player.getPersistentDataContainer();
         NamespacedKey timeUsed = new NamespacedKey(plugin, "time_used_hook");
         NamespacedKey yLevelOnUse = new NamespacedKey(plugin, "y_level_on_use_hook");
+        NamespacedKey pitchOnUse = new NamespacedKey(plugin, "pitch_on_use_hook");
         pdc.set(timeUsed, PersistentDataType.LONG, System.currentTimeMillis());
         pdc.set(yLevelOnUse, PersistentDataType.DOUBLE, player.getLocation().getY());
+        pdc.set(pitchOnUse, PersistentDataType.FLOAT, player.getLocation().getPitch());
     }
 
     @EventHandler
@@ -461,19 +464,22 @@ public class PlayerListener implements Listener {
         PersistentDataContainer pdc = player.getPersistentDataContainer();
         NamespacedKey timeUsedPDC = new NamespacedKey(plugin, "time_used_hook");
         NamespacedKey yLevelOnUsePDC = new NamespacedKey(plugin, "y_level_on_use_hook");
+        NamespacedKey pitchOnUsePDC = new NamespacedKey(plugin, "pitch_on_use_hook");
 
         if (!pdc.has(timeUsedPDC, PersistentDataType.LONG)
-                || !pdc.has(yLevelOnUsePDC, PersistentDataType.DOUBLE))
+                || !pdc.has(yLevelOnUsePDC, PersistentDataType.DOUBLE)
+                || !pdc.has(pitchOnUsePDC, PersistentDataType.FLOAT))
             return;
 
         long timeUsedMillis = pdc.get(timeUsedPDC, PersistentDataType.LONG);
         double yLevelOnUse = pdc.get(yLevelOnUsePDC, PersistentDataType.DOUBLE);
+        float pitchOnUse = pdc.get(pitchOnUsePDC, PersistentDataType.FLOAT);
 
-        if(System.currentTimeMillis()-timeUsedMillis > 5000L)
+        if (System.currentTimeMillis() - timeUsedMillis > 5000L)
             return;
 
         double currentY = player.getLocation().getY();
-        if (currentY >= yLevelOnUse-3) {
+        if (currentY >= yLevelOnUse - 3 || pitchOnUse > 30.0) {
             // Player is above the Y level when the hook was used - prevent fall damage
             // Subtract 3 for safety margin to account for slight variations in landing position
             event.setCancelled(true);
@@ -481,6 +487,7 @@ public class PlayerListener implements Listener {
             // Player is below the Y level when the hook was used - allow fall damage and remove PDC entries
             pdc.remove(timeUsedPDC);
             pdc.remove(yLevelOnUsePDC);
+            pdc.remove(pitchOnUsePDC);
         }
     }
 

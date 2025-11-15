@@ -1,7 +1,7 @@
 name: GrapplingHook
 author: mSuro_
 description: A simple grappling hook plugin. Heavily modified fork of GrapplingHook by snowgears [65000+ downloads]
-version: 1.0
+version: 1.1-BETA
 api-version: 1.17
 main: me.msuro.grapplinghook.GrapplingHook
 permissions:

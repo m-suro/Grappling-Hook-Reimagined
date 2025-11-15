@@ -36,21 +36,21 @@ public class CommandHandler extends BukkitCommand {
 
                 //these are commands only operators have access to
                 if (player.hasPermission("grapplinghook.operator") || player.isOp()) {
-                    player.sendMessage(plugin.formatMessage(plugin.getConfig().getString("messages.commands-help")));
-                    player.sendMessage(plugin.formatMessage(plugin.getConfig().getString("messages.command-reload").replace("[command]", this.getName())));
-                    player.sendMessage(plugin.formatMessage(plugin.getConfig().getString("messages.command-give-self").replace("[command]", this.getName())));
-                    player.sendMessage(plugin.formatMessage(plugin.getConfig().getString("messages.command-give-player").replace("[command]", this.getName())));
+                    plugin.sendFormattedMessage(player, plugin.getConfig().getString("messages.commands-help"));
+                    plugin.sendFormattedMessage(player, plugin.getConfig().getString("messages.command-reload").replace("[command]", this.getName()));
+                    plugin.sendFormattedMessage(player, plugin.getConfig().getString("messages.command-give-self").replace("[command]", this.getName()));
+                    plugin.sendFormattedMessage(player, plugin.getConfig().getString("messages.command-give-player").replace("[command]", this.getName()));
                     return true;
                 } else {
-                    player.sendMessage(plugin.formatMessage(plugin.getConfig().getString("messages.no-permission")));
+                    plugin.sendFormattedMessage(player, plugin.getConfig().getString("messages.no-permission"));
                     return true;
                 }
             }
             //these are commands that can be executed from the console
             else {
-                sender.sendMessage(plugin.formatMessage(plugin.getConfig().getString("messages.commands-help")));
-                sender.sendMessage(plugin.formatMessage(plugin.getConfig().getString("messages.command-reload").replace("[command]", this.getName())));
-                sender.sendMessage(plugin.formatMessage(plugin.getConfig().getString("messages.command-give-player").replace("[command]", this.getName())));
+                plugin.sendFormattedMessage(sender, plugin.getConfig().getString("messages.commands-help"));
+                plugin.sendFormattedMessage(sender, plugin.getConfig().getString("messages.command-reload").replace("[command]", this.getName()));
+                plugin.sendFormattedMessage(sender, plugin.getConfig().getString("messages.command-give-player").replace("[command]", this.getName()));
                 return true;
             }
         } else if (args.length == 1) {
@@ -59,17 +59,17 @@ public class CommandHandler extends BukkitCommand {
                     Player player = (Player) sender;
                     if (player.hasPermission("grapplinghook.operator") || player.isOp()) {
                         plugin.reload();
-                        player.sendMessage(plugin.formatMessage(plugin.getConfig().getString("messages.plugin-reloaded-player")));
+                        plugin.sendFormattedMessage(player, plugin.getConfig().getString("messages.plugin-reloaded-player"));
                     } else {
-                        player.sendMessage(plugin.formatMessage(plugin.getConfig().getString("messages.no-permission")));
+                        plugin.sendFormattedMessage(player, plugin.getConfig().getString("messages.no-permission"));
                     }
                 } else {
                     plugin.reload();
-                    sender.sendMessage(plugin.formatMessage(plugin.getConfig().getString("messages.plugin-reloaded-console")));
+                    plugin.sendFormattedMessage(sender, plugin.getConfig().getString("messages.plugin-reloaded-console"));
                 }
                 return true;
             } else if (args[0].equalsIgnoreCase("give")) {
-                sender.sendMessage(plugin.formatMessage(plugin.getConfig().getString("messages.hook-not-specified"))
+                plugin.sendFormattedMessage(sender, plugin.getConfig().getString("messages.hook-not-specified")
                         .replace("[command]", this.getName()));
             }
             return true;
@@ -83,23 +83,23 @@ public class CommandHandler extends BukkitCommand {
                         if (hooksSection != null && hooksSection.contains(hookName)) {
                             GrapplingHookType hookType = new GrapplingHookType(hookName).createItemStack();
                             if (hookType == null) {
-                                player.sendMessage(plugin.formatMessage(plugin.getConfig().getString("messages.give-hook-failed").replace("[hook_id]", hookName)));
+                                plugin.sendFormattedMessage(player, plugin.getConfig().getString("messages.give-hook-failed").replace("[hook_id]", hookName));
                                 return true;
                             }
                             if (player.getInventory().firstEmpty() == -1) {
-                                player.sendMessage(plugin.formatMessage(plugin.getConfig().getString("messages.inventory-full")));
+                                plugin.sendFormattedMessage(player, plugin.getConfig().getString("messages.inventory-full"));
                                 return true;
                             }
                             player.getInventory().addItem(hookType.getItemStack());
-                            player.sendMessage(plugin.formatMessage(plugin.getConfig().getString("messages.hook-given-self").replace("[hook_id]", hookName)));
+                            plugin.sendFormattedMessage(player, plugin.getConfig().getString("messages.hook-given-self").replace("[hook_id]", hookName));
                         } else {
-                            player.sendMessage(plugin.formatMessage(plugin.getConfig().getString("messages.hook-not-found").replace("[hook_id]", hookName)));
+                            plugin.sendFormattedMessage(player, plugin.getConfig().getString("messages.hook-not-found").replace("[hook_id]", hookName));
                         }
                     } else {
-                        player.sendMessage(plugin.formatMessage(plugin.getConfig().getString("messages.no-permission")));
+                        plugin.sendFormattedMessage(player, plugin.getConfig().getString("messages.no-permission"));
                     }
                 } else {
-                    sender.sendMessage(plugin.formatMessage(plugin.getConfig().getString("messages.player-not-specified"))
+                    plugin.sendFormattedMessage(sender, plugin.getConfig().getString("messages.player-not-specified")
                             .replace("[command]", this.getName()));
                 }
             }
@@ -110,7 +110,7 @@ public class CommandHandler extends BukkitCommand {
                 Player player = Bukkit.getPlayer(pName);
                 if (player == null || !player.isOnline()) {
                     String message = plugin.getConfig().getString("messages.player-not-found").replace("[player]", pName);
-                    sender.sendMessage(plugin.formatMessage(message));
+                    plugin.sendFormattedMessage(sender, message);
                     return true;
                 }
                 ConfigurationSection hooksSection = plugin.getHooksConfig().getConfigurationSection("hooks");
@@ -118,12 +118,12 @@ public class CommandHandler extends BukkitCommand {
                     GrapplingHookType hookType = new GrapplingHookType(hookName).createItemStack();
                     if (hookType == null) {
                         String message = plugin.getConfig().getString("messages.give-hook-failed").replace("[hook_id]", hookName);
-                        sender.sendMessage(plugin.formatMessage(message));
+                        plugin.sendFormattedMessage(sender, message);
                         return true;
                     }
                     if (player.getInventory().firstEmpty() == -1) {
                         String message = plugin.getConfig().getString("messages.inventory-full-player");
-                        sender.sendMessage(plugin.formatMessage(message));
+                        plugin.sendFormattedMessage(sender, message);
                         return true;
                     }
                     player.getInventory().addItem(hookType.getItemStack());
@@ -132,14 +132,14 @@ public class CommandHandler extends BukkitCommand {
                     String senderMessage = plugin.getConfig().getString("messages.hook-given-player")
                             .replace("[hook_id]", hookName)
                             .replace("[player]", player.getName());
-                    sender.sendMessage(plugin.formatMessage(senderMessage));
+                    plugin.sendFormattedMessage(sender, senderMessage);
 
                     // Send notification to receiving player
                     String receiverMessage = plugin.getConfig().getString("messages.hook-received").replace("[hook_id]", hookName);
-                    player.sendMessage(plugin.formatMessage(receiverMessage));
+                    plugin.sendFormattedMessage(player, receiverMessage);
                 } else {
                     String message = plugin.getConfig().getString("messages.hook-not-found").replace("[hook_id]", hookName);
-                    sender.sendMessage(plugin.formatMessage(message));
+                    plugin.sendFormattedMessage(sender, message);
                 }
             }
         }

@@ -9,9 +9,11 @@ import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandMap;
+import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -90,7 +92,8 @@ public class GrapplingHook extends JavaPlugin{
         hooksConfig = YamlConfiguration.loadConfiguration(new File(this.getDataFolder(), "hooks.yml"));
 
 
-		commandHandler = new CommandHandler(this, "grapplinghook.operator", "gh", "Base command for the GrapplingHook plugin", "/gh", new ArrayList(Arrays.asList("gh")));
+		commandHandler = new CommandHandler(this, "grapplinghook.operator", "grapplinghook", "Base command for the GrapplingHook plugin", "/gh", new ArrayList(Arrays.asList("gh")));
+
 	}
 
 	public void onDisable(){
@@ -143,6 +146,7 @@ public class GrapplingHook extends JavaPlugin{
     private void checkAndCreateConfigFile(String fileName) {
         File file = new File(getDataFolder(), fileName);
         if (!file.exists()) {
+            saveResource(fileName, false);
             try {
                 if (file.createNewFile()) {
                     InputStream in = getResource(fileName);
@@ -161,8 +165,8 @@ public class GrapplingHook extends JavaPlugin{
     }
 
     public String formatMessage(String message) {
-        if (message == null || message.isEmpty()) {
-            return "";
+        if (message == null || message.trim().isEmpty()) {
+            return null;
         }
         message = message.replace("[prefix]", config.getString("prefix", "[GrapplingHook]"));
         Pattern HEX_PATTERN = Pattern.compile("&#([A-Fa-f0-9]{6})");
@@ -176,6 +180,20 @@ public class GrapplingHook extends JavaPlugin{
         }
         matcher.appendTail(formattedMessage);
         return ChatColor.translateAlternateColorCodes('&', formattedMessage.toString());
+    }
+
+    public void sendFormattedMessage(CommandSender sender, String rawMessage) {
+        String formatted = formatMessage(rawMessage);
+        if (formatted != null && !formatted.trim().isEmpty()) {
+            sender.sendMessage(formatted);
+        }
+    }
+
+    public void sendFormattedActionBar(Player player, String rawMessage) {
+        String formatted = formatMessage(rawMessage);
+        if (formatted != null && !formatted.trim().isEmpty()) {
+            player.sendActionBar(formatted);
+        }
     }
 
 }

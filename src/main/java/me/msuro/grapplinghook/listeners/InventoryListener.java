@@ -182,9 +182,8 @@ public class InventoryListener implements Listener {
      * Sends a formatted message to the player explaining why the action was blocked
      */
     private void sendBlockMessage(Player player, String inventoryType) {
-        String message = plugin.formatMessage(
-                plugin.getConfig().getString("messages.inventory-combine-block")
-                        .replace("[invtype]", inventoryType));
-        player.sendMessage(message);
+        String rawMessage = plugin.getConfig().getString("messages.inventory-combine-block")
+                        .replace("[invtype]", inventoryType);
+        plugin.sendFormattedMessage(player, rawMessage);
     }
 }

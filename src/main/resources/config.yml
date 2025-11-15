@@ -11,7 +11,7 @@ messages:
   # [maxuses] gets replaced with actual number
   use-limit-reached: "[prefix] &7This hook has ran out of uses and is now broken."
   # [hookname] - hook's item display name
-  hook-destroyed-message: "[prefix] &7Your hook has reached its use limit and has been destroyed."
+  hook-destroyed: "[prefix] &7Your hook has reached its use limit and has been destroyed."
 
   inventory-combine-block: "[prefix] &7Grappling hooks cannot be combined or modified in [invtype]."
 
